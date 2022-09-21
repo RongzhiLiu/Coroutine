@@ -1,6 +1,13 @@
 # Coroutine
 Android 高性能线程池框架（伪协程）
 
+依赖：
+```java
+implementation 'com.github.RongzhiLiu:Coroutine:1.0.0'
+```
+
+
+
 Java 线程池的缺点：
 
 ​	1.在提交新任务时，如果核心线程数没有达到最大，则会继续创建新的线程，而不是查看是否有空闲的线程，
