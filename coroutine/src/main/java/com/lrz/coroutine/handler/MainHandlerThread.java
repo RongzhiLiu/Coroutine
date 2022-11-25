@@ -4,6 +4,7 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
 
 /**
  * Author And Date: liurongzhi on 2020/3/1.
@@ -33,7 +34,7 @@ class MainHandlerThread implements IHandlerThread {
 
     @Override
     public boolean quit() {
-//        YYLog.logE("YY_MainHandler", "main looper can not be quit!");
+        LLog.e("YY_MainHandler", "main looper can not be quit!");
         return false;
     }
 

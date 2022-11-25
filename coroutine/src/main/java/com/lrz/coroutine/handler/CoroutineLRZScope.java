@@ -6,6 +6,8 @@ import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.PriorityRunnable;
+import com.lrz.coroutine.flow.Observable;
+import com.lrz.coroutine.flow.Task;
 
 import java.util.ArrayList;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -61,6 +63,13 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         }
         thread.setOnHandlerThreadListener(this);
         return thread;
+    }
+
+    public <T> Observable<T> create(Task<T> task) {
+        Observable<T> observable;
+        observable = new Observable<>(task);
+        task.setObservable(observable);
+        return observable;
     }
 
     @Override
@@ -134,7 +143,6 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
             job = jobQueue.poll();
         }
         if (job == null) return;
-
         /*
             1 先获取空闲的线程，如果有，就执行
             2 如果没有空闲线程，先看任务队列压力是否过载（io队列长度大于核心线程数量的2倍），如果过载，则创建非核心线程执行任务
@@ -142,9 +150,11 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
          */
 
         IHandlerThread handlerThread = getThreadHandler(job.getDispatcher());
-        if (handlerThread != null && !handlerThread.execute(job.handlerThread(handlerThread))) {
-            LLog.d(TAG, job.getDispatcher().name() + "there has no thread to execute your job ,please hold on");
-            addToJobQueue(job.handlerThread(null));
+        if (handlerThread != null) {
+            if (!handlerThread.execute(job.handlerThread(handlerThread))) {
+                LLog.d(TAG, job.getDispatcher().name() + "there has no thread to execute your job ,please hold on");
+                addToJobQueue(job.handlerThread(null));
+            }
         } else {
             //如果该任务是BACKGROUND，且此时BACKGROUND已经满载，且backgroundJobs任务堆积(线程数量的2倍)，则IO中的空闲非核心线程将尝试窃取任务执行
             //如果是io满载，且任务队列达到 MAX_COUNT,则BACKGROUND中空闲的非核心线程尝试窃取任务执行

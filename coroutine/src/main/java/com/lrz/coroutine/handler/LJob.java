@@ -1,5 +1,7 @@
 package com.lrz.coroutine.handler;
 
+import android.os.Looper;
+
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
 
@@ -108,7 +110,6 @@ class LJob implements Runnable {
             LLog.e(TAG, "job can not be execute again!");
             return;
         }
-
         Runnable work = runnable;
         if (!isCancel() && work != null) {
             isRunning = true;

@@ -35,4 +35,6 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.navigation:navigation-fragment:2.5.2'
     implementation 'androidx.navigation:navigation-ui:2.5.2'
+    api "com.squareup.okhttp3:okhttp:4.10.0"
+    api 'com.google.code.gson:gson:2.8.5'
 }
