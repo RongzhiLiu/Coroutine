@@ -79,10 +79,8 @@ public class FirstFragment extends Fragment {
                     Log.e("请求错误", "code=" + error.getCode() + "   msg=" + error.getMessage());
                 }).subscribe(bean -> {
                     Log.i("请求成功", "data=" + bean.str);
-                }).map(bean -> bean)
-                .subscribe(Dispatcher.IO, s -> {
-                    Log.i("请求成功map", "data=" + s);
                 }).GET();
+
         request.cancel();
 
         CoroutineLRZContext.INSTANCE.create(new Task<String>() {
