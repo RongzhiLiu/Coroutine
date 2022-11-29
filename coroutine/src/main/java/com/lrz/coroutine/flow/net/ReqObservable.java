@@ -1,5 +1,7 @@
 package com.lrz.coroutine.flow.net;
 
+import android.util.Log;
+
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.flow.Function;
 import com.lrz.coroutine.flow.Observable;
@@ -59,9 +61,12 @@ public class ReqObservable<T> extends Observable<T> {
      * @return Request
      */
     public final synchronized Request GET() {
-        ((RequestBuilder<T>) getTask()).setMethod(0);
+        ((RequestBuilder<?>) getTask()).setMethod(0);
         // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
         Dispatcher dispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+        if (error == null) {
+            error(new DefReqError());
+        }
         super.execute(dispatcher);
         return new Request(this);
     }
@@ -72,8 +77,11 @@ public class ReqObservable<T> extends Observable<T> {
      * @return Request
      */
     public final synchronized Request POST() {
-        ((RequestBuilder<T>) task).setMethod(1);
+        ((RequestBuilder<?>) getTask()).setMethod(1);
         Dispatcher dispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+        if (error == null) {
+            error(new DefReqError());
+        }
         super.execute(dispatcher);
         return new Request(this);
     }
@@ -110,5 +118,13 @@ public class ReqObservable<T> extends Observable<T> {
             }
         }
         return false;
+    }
+
+    public static class DefReqError implements ReqError {
+
+        @Override
+        public void onError(RequestException error) {
+            Log.e("coroutine_def_error", "未处理的错误", error);
+        }
     }
 }

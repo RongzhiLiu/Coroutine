@@ -207,7 +207,7 @@ public class Observable<T> {
                 CoroutineLRZContext.INSTANCE.execute(dispatcher, () -> error.onError(e));
             }
         } else {
-            throw new CoroutineFlowException("coroutine inner error,look at CauseBy...", e);
+            throw new CoroutineFlowException("coroutine inner error,look at Cause By...", e);
         }
     }
 

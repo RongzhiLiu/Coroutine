@@ -14,6 +14,34 @@ public interface CoroutineLRZContext {
      */
     CoroutineLRZContext INSTANCE = new CoroutineLRZScope();
 
+    static <T> Observable<T> Create(Task<T> task) {
+        return INSTANCE.create(task);
+    }
+
+    static Job Execute(Dispatcher dispatcher, Runnable runnable) {
+        return INSTANCE.execute(dispatcher, runnable);
+    }
+
+    static Job ExecuteTime(Dispatcher dispatcher, Runnable runnable, long spaceTime) {
+        return INSTANCE.executeTime(dispatcher, runnable, spaceTime);
+    }
+
+    static Job ExecuteDelay(Dispatcher dispatcher, Runnable runnable, long delayTime) {
+        return INSTANCE.executeDelay(dispatcher, runnable, delayTime);
+    }
+
+    static Job ExecuteJobs(Dispatcher dispatcher, Runnable... runnable) {
+        return INSTANCE.executeJobs(dispatcher, runnable);
+    }
+
+    static void Clear() {
+        INSTANCE.clear();
+    }
+
+    static void SetKeepTime(long time) {
+        INSTANCE.setKeepTime(time);
+    }
+
     /**
      * 启动异步任务
      *
@@ -68,8 +96,9 @@ public interface CoroutineLRZContext {
 
     /**
      * 通过task 创建可以被订阅的Observable
+     *
      * @param task 任务
-     * @param <T> 范型及task任务的返回值类型
+     * @param <T>  范型及task任务的返回值类型
      * @return
      */
     <T> Observable<T> create(Task<T> task);

@@ -45,7 +45,7 @@ public class CommonRequest {
         CommonRequest.msgStr = msgStr;
     }
 
-    public static <T> ReqObservable<T> create(RequestBuilder<T> task) {
+    public static <T> ReqObservable<T> Create(RequestBuilder<T> task) {
         ReqObservable<T> observable;
         observable = new ReqObservable<>(task);
         task.setObservable(observable);

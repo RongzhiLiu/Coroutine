@@ -125,14 +125,16 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
          * 处理调用栈，增加自定义调用栈，方便问题定位
          */
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        int i = 0;
-        StackTraceElement[] stackTrace = new StackTraceElement[3];
-        for (StackTraceElement element : stackTraceElements) {
-            if (i > 0 || element.getClassName().equals(CoroutineLRZScope.class.getName())) {
-                i += 1;
-            }
-            if (i < 4 && i > 0) {
-                stackTrace[i - 1] = element;
+        StackTraceElement[] stackTrace = null;
+        int j = 0;
+        for (int i = 0; i < stackTraceElements.length; i++) {
+            StackTraceElement element = stackTraceElements[i];
+            if (stackTrace == null && element.getClassName().equals(CoroutineLRZScope.class.getName())) {
+                int length = Math.min(5, stackTraceElements.length - i - 1);
+                stackTrace = new StackTraceElement[length];
+            } else if (stackTrace != null && j < stackTrace.length) {
+                stackTrace[j] = element;
+                j += 1;
             }
         }
         job.setStackTraceExtra(stackTrace);

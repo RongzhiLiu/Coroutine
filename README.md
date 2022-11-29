@@ -6,7 +6,7 @@
 #### 一.导入库
 
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.0.2'
+implementation 'com.github.RongzhiLiu:Coroutine:1.0.3'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'
@@ -42,14 +42,14 @@ implementation 'com.google.code.gson:gson:2.8.5'
 
 ```java
 // 发起异步任务
-Job job = CoroutineLRZContext.INSTANCE.execute(Dispatcher.IO, new Runnable() {
+Job job = CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
             @Override
             public void run() {
                 
             }
         });
 // 发起优先级任务
-Job job2 = CoroutineLRZContext.INSTANCE.execute(Dispatcher.IO, new PriorityRunnable(Priority.HIGH) {
+Job job2 = CoroutineLRZContext.Execute(Dispatcher.IO, new PriorityRunnable(Priority.HIGH) {
             @Override
             public void run() {
 
@@ -91,7 +91,7 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @param runnable   任务
      * @return job
      */
-    Job execute(Dispatcher dispatcher, Runnable runnable);
+    Job Execute(Dispatcher dispatcher, Runnable runnable);
 
     /**
      * 启动周期任务
@@ -101,7 +101,7 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @param spaceTime  周期时间
      * @return job
      */
-    Job executeTime(Dispatcher dispatcher, Runnable runnable, long spaceTime);
+    Job ExecuteTime(Dispatcher dispatcher, Runnable runnable, long spaceTime);
 
     /**
      * 启动延时任务
@@ -112,7 +112,7 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @return job
      */
 
-    Job executeDelay(Dispatcher dispatcher, Runnable runnable, long delayTime);
+    Job ExecuteDelay(Dispatcher dispatcher, Runnable runnable, long delayTime);
 
     /**
      * 同时执行多个job，不保证先后顺序,
@@ -120,19 +120,19 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @param runnable   任务
      * @return job 返回第一个job，调用job.cancel(),会取消所有袭相关任务任务
      */
-    Job executeJobs(Dispatcher dispatcher, Runnable... runnable);
+    Job ExecuteJobs(Dispatcher dispatcher, Runnable... runnable);
 
     /**
      * 清除所有任务
      */
-    void clear();
+    void Clear();
 
 
     /**
      * 设置非核心线程最大空闲时间，默认值10000毫秒
      * @param time 毫秒
      */
-    void setKeepTime(long time);
+    void SetKeepTime(long time);
 ```
 
 #### 四.高级用法一
@@ -202,7 +202,7 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
 
 ```java
 // 先通过create函数创建任务
-  Observable<T> observable = CoroutineLRZContext.INSTANCE.create(new Task<String>() {
+  Observable<T> observable = CoroutineLRZContext.Create(new Task<String>() {
       @Override
       public String submit() {
            return "任务结果，由task 的范型来限定返回类型";
@@ -221,7 +221,7 @@ observable.cancel();
 ##### 4.3举例2:一个生产事件，多个订阅的消费者
 
 ```java
-	CoroutineLRZContext.INSTANCE.create(new Task<String>() {
+	CoroutineLRZContext.Create(new Task<String>() {
 	    @Override
 	    public String submit() {
 	        return "任务结果，由task 的范型来限定返回类型";
@@ -249,7 +249,7 @@ observable.cancel();
 ##### 	5.1举例1 多个订阅者时，有未指定线程的订阅者
 
 ```java
-	CoroutineLRZContext.INSTANCE.create(new Task<String>() {
+	CoroutineLRZContext.Create(new Task<String>() {
 	    @Override
 	    public String submit() {
 	        return "任务结果，由task 的范型来限定返回类型";
@@ -265,7 +265,7 @@ observable.cancel();
 // 第二个订阅者没有指定线程，往上推，第一个订阅者的线程是BACKGROUND，那么他的订阅线程也是BACKGROUND
 
 
-CoroutineLRZContext.INSTANCE.create(new Task<String>() {
+CoroutineLRZContext.Create(new Task<String>() {
 	    @Override
 	    public String submit() {
 	        return "任务结果，由task 的范型来限定返回类型";
@@ -290,7 +290,7 @@ execute所设置的线程。
 
 ```java
 // 发起网络请求，范型表示网络返回后解析的bean，如果不需要json解析则写string 如下	
-Request request = CommonRequest.create(new RequestBuilder<String>("https://www.baidu.com") {
+Request request = CommonRequest.Create(new RequestBuilder<String>("https://www.baidu.com") {
 	    {
 	        addParam("wd", "xxx");
 	        addParam("wk", "xxx");
@@ -324,7 +324,7 @@ RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url"){
 
 ```java
 // 区别于事件流 在error 和 subscribe 不指定线程的情况下，默认 是 MAIN线程，其他多订阅者等用法和事件流相同
-Request request = CommonRequest.create(requestBuilder)
+Request request = CommonRequest.Create(requestBuilder)
 		.error(error -> {
 		    error.printStackTrace();
 		    Log.e("请求错误", "code=" + error.getCode() + "   msg=" + error.getMessage());
