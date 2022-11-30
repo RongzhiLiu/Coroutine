@@ -141,7 +141,7 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
 
 类似rxjava，却区别于rxjava，因为rxjava更加突出多个事件的事件流，而此框架更加突出单个事件的流向，一对n的消费模型，更加强调事件生产者和多个消费者的关系，让同一个结果在不同的消费者模型中做不同的处理，让不同的订阅者扮演任务链中的不同角色
 
-![时序图](/Users/rongzhiliu/AndroidStudioProjects/Coroutine/liuchengtu.jpg)
+![时序图](https://github.com/RongzhiLiu/Coroutine/blob/master/liuchengtu.jpg)
 
 ```java
 		/**方法介绍
