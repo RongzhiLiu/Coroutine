@@ -2,14 +2,9 @@ package com.lrz.coroutine.flow.net;
 
 import android.util.Log;
 
-import androidx.annotation.NonNull;
-
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
-import okhttp3.Call;
-import okhttp3.Connection;
-import okhttp3.EventListener;
 import okhttp3.Headers;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -56,9 +51,8 @@ public class HttpClient {
     }
 
     private Interceptor interceptor = new Interceptor() {
-        @NonNull
         @Override
-        public Response intercept(@NonNull Chain chain) throws IOException {
+        public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
             Response proceed = chain.proceed(request);
             if (proceed.isSuccessful()) {

@@ -6,7 +6,7 @@
 #### 一.导入库
 
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.0.3'
+implementation 'com.github.RongzhiLiu:Coroutine:1.0.4'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'

@@ -11,8 +11,10 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 import com.lrz.coroutine.flow.net.CommonRequest;
+import com.lrz.coroutine.flow.net.Request;
 import com.lrz.coroutine.flow.net.RequestBuilder;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.sample.databinding.FragmentFirstBinding;
@@ -20,6 +22,12 @@ import com.lrz.sample.databinding.FragmentFirstBinding;
 public class FirstFragment extends Fragment {
 
     private FragmentFirstBinding binding;
+    private volatile int mainExe = 0;
+    private volatile int mainSub = 0;
+    private volatile int ioExe = 0;
+    private volatile int ioSub = 0;
+    private volatile int backExe = 0;
+    private volatile int backSub = 0;
 
     @Override
     public View onCreateView(
@@ -42,20 +50,106 @@ public class FirstFragment extends Fragment {
                         .navigate(R.id.action_FirstFragment_to_SecondFragment);
             }
         });
+        binding.buttonIo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for (int i = 0; i < 5; i++) {
+                    synchronized (FirstFragment.this) {
+                        ioExe += 1;
+                    }
+                    CoroutineLRZContext.Create(new Task<String>() {
+                        @Override
+                        public String submit() {
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            return Thread.currentThread().getName();
+                        }
+                    }).subscribe(new Observer<String>() {
+                        @Override
+                        public void onSubscribe(String s) {
+                            synchronized (FirstFragment.this) {
+                                ioSub += 1;
+                                System.out.println("-----io 完成：发起了" + ioExe + " ,共完成：" + ioSub+ "  thread="+s);
+                            }
 
-
-        CommonRequest.Create(new RequestBuilder<String>() {
-            {
-                url("https://www.baidu.com");//请求url，也可通过构造函数传入
-                addParam("wd", "glide");//添加请求参数
-                json("{}");//在请求体中添加json，在post时生效
-                addHeader("name", "mark");//添加自定义header
+                        }
+                    }).execute(Dispatcher.IO);
+                }
             }
-        }).error(error -> {
-            Log.e("请求错误", "code=" + error.getCode());
-        }).subscribe(s -> {
-            Log.e("请求成功", "data=" + s);
-        }).POST();
+        });
+
+        binding.buttonMain.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for (int i = 0; i < 5; i++) {
+                    synchronized (FirstFragment.this) {
+                        mainExe += 1;
+                    }
+                    CoroutineLRZContext.Create(new Task<String>() {
+                        @Override
+                        public String submit() {
+                            return Thread.currentThread().getName();
+                        }
+                    }).subscribe(new Observer<String>() {
+                        @Override
+                        public void onSubscribe(String s) {
+                            synchronized (FirstFragment.this) {
+                                mainSub += 1;
+                                System.out.println("-----main 完成：发起了" + mainExe + " ,共完成：" + mainSub+ "  thread="+s);
+                            }
+
+                        }
+                    }).execute(Dispatcher.MAIN);
+                }
+            }
+        });
+
+        binding.buttonBackground.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                for (int i = 0; i < 5; i++) {
+                    synchronized (FirstFragment.this) {
+                        backExe += 1;
+                    }
+                    CoroutineLRZContext.Create(new Task<String>() {
+                        @Override
+                        public String submit() {
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            return Thread.currentThread().getName();
+                        }
+                    }).subscribe(new Observer<String>() {
+                        @Override
+                        public void onSubscribe(String s) {
+                            synchronized (FirstFragment.this) {
+                                backSub += 1;
+                                System.out.println("-----back 完成：发起了" + backExe + " ,共完成：" + backSub + "  thread="+s);
+                            }
+
+                        }
+                    }).execute(Dispatcher.BACKGROUND);
+                }
+            }
+        });
+
+//        CommonRequest.Create(new RequestBuilder<String>() {
+//            {
+//                url("https://www.baidu.com");//请求url，也可通过构造函数传入
+//                addParam("wd", "glide");//添加请求参数
+//                json("{}");//在请求体中添加json，在post时生效
+//                addHeader("name", "mark");//添加自定义header
+//            }
+//        }).error(error -> {
+//            Log.e("请求错误", "code=" + error.getCode());
+//        }).subscribe(s -> {
+//            Log.e("请求成功", "data=" + s);
+//        }).POST();
 //
 //
 //        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {
@@ -67,7 +161,7 @@ public class FirstFragment extends Fragment {
 //            }
 //        };
 //
-//        Request request = CommonRequest.create(requestBuilder)
+//        Request request = CommonRequest.Create(requestBuilder)
 //                .error(error -> {
 //                    error.printStackTrace();
 //                    Log.e("请求错误", "code=" + error.getCode() + "   msg=" + error.getMessage());
@@ -108,16 +202,16 @@ public class FirstFragment extends Fragment {
 //        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
 //
 //
-        CoroutineLRZContext.Create(new Task<String>() {
-            @Override
-            public String submit() {
-                return "任务结果，由task 的范型来限定返回类型";
-            }
-        }).subscribe(Dispatcher.IO, str -> {
-            Log.i("Coroutine", str);
-        }).map().subscribe(bean -> { //第二个订阅者
-            Log.i("Coroutine", bean);
-        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+//        CoroutineLRZContext.Create(new Task<String>() {
+//            @Override
+//            public String submit() {
+//                return "任务结果，由task 的范型来限定返回类型";
+//            }
+//        }).subscribe(Dispatcher.IO, str -> {
+//            Log.i("Coroutine", str);
+//        }).map().subscribe(bean -> { //第二个订阅者
+//            Log.i("Coroutine", bean);
+//        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
 
 
     }
@@ -135,4 +229,5 @@ public class FirstFragment extends Fragment {
             this.str = str;
         }
     }
+
 }

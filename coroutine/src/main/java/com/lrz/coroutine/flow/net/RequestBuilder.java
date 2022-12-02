@@ -1,7 +1,5 @@
 package com.lrz.coroutine.flow.net;
 
-import androidx.annotation.Keep;
-
 import com.lrz.coroutine.flow.Task;
 
 import java.lang.reflect.ParameterizedType;
@@ -14,7 +12,6 @@ import java.util.Map;
  * CreateTime:  2022/11/15
  * Description:
  */
-@Keep
 public abstract class RequestBuilder<B> extends Task<B> {
     private String url;
     protected Map<String, String> headers;
