@@ -1,6 +1,6 @@
 package com.lrz.coroutine.handler;
 
-import android.os.Looper;
+import android.os.SystemClock;
 
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
@@ -20,8 +20,8 @@ class LJob implements Runnable {
     volatile Runnable runnable;
     private volatile boolean isRunning = false;
     private volatile boolean cancel = false;
-    volatile long delayTime = 0;
-
+    volatile long sysTime = 0;
+    private volatile long delay = 0;
     private volatile boolean isLoop = false;
     /**
      * 额外的方法栈信息，记录了异步在执行之前的发起位置
@@ -45,7 +45,8 @@ class LJob implements Runnable {
     }
 
     public synchronized LJob delayTime(long spaceTime) {
-        this.delayTime = spaceTime;
+        this.sysTime = SystemClock.uptimeMillis() + spaceTime;
+        delay = spaceTime;
         return this;
     }
 
@@ -60,7 +61,8 @@ class LJob implements Runnable {
 
     private synchronized void recycle() {
         isLoop = false;
-        delayTime = 0;
+        sysTime = 0;
+        delay = 0;
         isRunning = false;
         dispatcher = null;
         runnable = null;
@@ -130,9 +132,10 @@ class LJob implements Runnable {
             if (isLoop && dispatcher != null) {
                 isRunning = false;
                 cancel = false;
-                if (iHandlerThread != null) {
-                    iHandlerThread.execute(this);
+                synchronized (this) {
+                    iHandlerThread = null;
                 }
+                ((CoroutineLRZScope) CoroutineLRZScope.INSTANCE).executeTimeInner(dispatcher, this, delay);
             } else {
                 isRunning = false;
                 synchronized (this) {

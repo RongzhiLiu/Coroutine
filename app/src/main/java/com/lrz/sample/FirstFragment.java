@@ -17,6 +17,7 @@ import com.lrz.coroutine.flow.net.CommonRequest;
 import com.lrz.coroutine.flow.net.Request;
 import com.lrz.coroutine.flow.net.RequestBuilder;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
+import com.lrz.coroutine.handler.Job;
 import com.lrz.sample.databinding.FragmentFirstBinding;
 
 public class FirstFragment extends Fragment {
@@ -39,7 +40,7 @@ public class FirstFragment extends Fragment {
         return binding.getRoot();
 
     }
-
+    Job job;
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
@@ -50,33 +51,24 @@ public class FirstFragment extends Fragment {
                         .navigate(R.id.action_FirstFragment_to_SecondFragment);
             }
         });
+
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0; i < 5; i++) {
-                    synchronized (FirstFragment.this) {
-                        ioExe += 1;
-                    }
-                    CoroutineLRZContext.Create(new Task<String>() {
+                for (int i = 0;i<5;i++) {
+                    CoroutineLRZContext.ExecuteDelay(Dispatcher.IO, new Runnable() {
                         @Override
-                        public String submit() {
-                            try {
-                                Thread.sleep(500);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            return Thread.currentThread().getName();
+                        public void run() {
+                            System.out.println("------任务执行" + Thread.currentThread()+"   "+this.hashCode());
                         }
-                    }).subscribe(new Observer<String>() {
-                        @Override
-                        public void onSubscribe(String s) {
-                            synchronized (FirstFragment.this) {
-                                ioSub += 1;
-                                System.out.println("-----io 完成：发起了" + ioExe + " ,共完成：" + ioSub+ "  thread="+s);
-                            }
+                    }, 0);
 
+                    CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
+                        @Override
+                        public void run() {
+                            System.out.println("------及时任务执行" + Thread.currentThread()+"   "+this.hashCode());
                         }
-                    }).execute(Dispatcher.IO);
+                    });
                 }
             }
         });
@@ -84,26 +76,30 @@ public class FirstFragment extends Fragment {
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0; i < 5; i++) {
-                    synchronized (FirstFragment.this) {
-                        mainExe += 1;
-                    }
-                    CoroutineLRZContext.Create(new Task<String>() {
-                        @Override
-                        public String submit() {
-                            return Thread.currentThread().getName();
-                        }
-                    }).subscribe(new Observer<String>() {
-                        @Override
-                        public void onSubscribe(String s) {
-                            synchronized (FirstFragment.this) {
-                                mainSub += 1;
-                                System.out.println("-----main 完成：发起了" + mainExe + " ,共完成：" + mainSub+ "  thread="+s);
-                            }
-
-                        }
-                    }).execute(Dispatcher.MAIN);
+                if (job!=null){
+                    job.cancel();
+                    job = null;
                 }
+//                for (int i = 0; i < 5; i++) {
+//                    synchronized (FirstFragment.this) {
+//                        mainExe += 1;
+//                    }
+//                    CoroutineLRZContext.Create(new Task<String>() {
+//                        @Override
+//                        public String submit() {
+//                            return Thread.currentThread().getName();
+//                        }
+//                    }).subscribe(new Observer<String>() {
+//                        @Override
+//                        public void onSubscribe(String s) {
+//                            synchronized (FirstFragment.this) {
+//                                mainSub += 1;
+//                                System.out.println("-----main 完成：发起了" + mainExe + " ,共完成：" + mainSub + "  thread=" + s);
+//                            }
+//
+//                        }
+//                    }).execute(Dispatcher.MAIN);
+//                }
             }
         });
 
@@ -129,7 +125,7 @@ public class FirstFragment extends Fragment {
                         public void onSubscribe(String s) {
                             synchronized (FirstFragment.this) {
                                 backSub += 1;
-                                System.out.println("-----back 完成：发起了" + backExe + " ,共完成：" + backSub + "  thread="+s);
+                                System.out.println("-----back 完成：发起了" + backExe + " ,共完成：" + backSub + "  thread=" + s);
                             }
 
                         }

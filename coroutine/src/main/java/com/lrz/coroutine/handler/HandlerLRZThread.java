@@ -1,11 +1,13 @@
 
 package com.lrz.coroutine.handler;
 
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.os.MessageQueue;
 import android.os.Process;
+import android.os.SystemClock;
 
 import com.lrz.coroutine.Dispatcher;
 
@@ -136,14 +138,21 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         if (isIdle()) {
             getThreadHandler().removeMessages(Integer.MIN_VALUE);
         }
-        isIdle = false;
-        getThreadHandler().postDelayed(job, job.delayTime);
-        return true;
+        isIdle = job.sysTime > SystemClock.uptimeMillis();
+        boolean result = getThreadHandler().postAtTime(job, job.sysTime);
+        if (isIdle) {
+            queueIdle();
+        }
+        return result;
     }
 
     @Override
     public synchronized void removeJob(Runnable runnable) {
         getThreadHandler().removeCallbacks(runnable);
+        //移除消息后，再次检查是否需要推出线程
+        if (!isCore()) {
+            tryQuitOutTime();
+        }
     }
 
 
@@ -180,7 +189,11 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         if (!isRunning()) return false;
         Looper looper = getLooper();
         if (looper != null) {
-            looper.quit();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                looper.quitSafely();
+            }else {
+                looper.quit();
+            }
             return true;
         }
         return false;
@@ -189,6 +202,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
     @Override
     public synchronized void tryQuitOutTime() {
         if (!isRunning()) return;
+        // 没有消息需要处理时，尝试退出非核心线程
         if (!hasJob()) {
             Message m = Message.obtain(getThreadHandler(), new Runnable() {
                 @Override

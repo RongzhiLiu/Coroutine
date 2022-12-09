@@ -90,6 +90,17 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         return new Job(job);
     }
 
+    /**
+     * 供Ljob内部使用的接口，用来实现循环任务
+     */
+    void executeTimeInner(Dispatcher dispatcher, LJob job, final long spaceTime) {
+        if (job == null) return;
+        job.dispatch(dispatcher)
+                .loop(true)
+                .delayTime(spaceTime);
+        doExecute(job);
+    }
+
     @Override
     public Job executeDelay(Dispatcher dispatcher, Runnable runnable, long delayTime) {
         LJob job = LJob.obtain(runnable)
@@ -275,13 +286,13 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         backgroundJobs.clear();
         synchronized (threadPool) {
             for (IHandlerThread handlerThread : threadPool) {
-                handlerThread.getThreadHandler().removeCallbacksAndMessages(null);
+                handlerThread.getThreadHandler().removeMessages(0);
             }
         }
 
         synchronized (backPool) {
             for (IHandlerThread handlerThread : backPool) {
-                handlerThread.getThreadHandler().removeCallbacksAndMessages(null);
+                handlerThread.getThreadHandler().removeMessages(0);
             }
         }
     }
@@ -293,14 +304,19 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         if (handlerThread.getDispatcher() == Dispatcher.BACKGROUND) {
             LJob job;
             if ((job = backgroundJobs.pollFirst()) != null) {
-                handlerThread.execute(job.handlerThread(handlerThread));
+                if (!handlerThread.execute(job.handlerThread(handlerThread))) {
+                    addToJobQueue(job.handlerThread(null));
+                }
                 return true;
             } else {
                 // 尝试窃取
                 boolean isBusy = runningCount >= MAX_COUNT && jobQueue.size() >= MAX_COUNT;
+                // 尝试拿非延迟任务
                 if (isBusy && (job = jobQueue.poll()) != null) {
                     LLog.d(TAG, ((Thread) handlerThread).getName() + " steal a job and do it when it is onIdle");
-                    handlerThread.execute(job.handlerThread(handlerThread));
+                    if (!handlerThread.execute(job.handlerThread(handlerThread))) {
+                        addToJobQueue(job.handlerThread(null));
+                    }
                     return true;
                 }
                 return false;
@@ -308,17 +324,21 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         } else {
             LJob job = jobQueue.poll();
             if (job != null) {
-                handlerThread.execute(job.handlerThread(handlerThread));
+                if (!handlerThread.execute(job.handlerThread(handlerThread))) {
+                    addToJobQueue(job.handlerThread(null));
+                }
                 return true;
             } else {
                 // 尝试窃取
                 boolean isBusy = backCount >= MAX_BACKGROUND && backgroundJobs.size() >= MAX_BACKGROUND * 2;
                 if (isBusy && (job = backgroundJobs.pollFirst()) != null) {
                     LLog.d(TAG, ((Thread) handlerThread).getName() + " steal a job and do it when it is onIdle");
-                    handlerThread.execute(job.handlerThread(handlerThread));
+                    if (!handlerThread.execute(job.handlerThread(handlerThread))) {
+                        addToJobQueue(job.handlerThread(null));
+                    }
                     return true;
                 }
-                if (!handlerThread.isCore() && !handlerThread.hasJob()) {
+                if (!handlerThread.isCore()) {
                     handlerThread.tryQuitOutTime();
                 }
                 return false;
