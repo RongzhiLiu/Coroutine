@@ -1,5 +1,6 @@
 package com.lrz.coroutine.flow.net;
 
+import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Task;
 
 import java.lang.reflect.ParameterizedType;
@@ -23,10 +24,17 @@ public abstract class RequestBuilder<B> extends Task<B> {
     private int method;
 
     public RequestBuilder(String url) {
+        super();
+        this.url = url;
+    }
+
+    public RequestBuilder(String url, Priority priority) {
+        super(priority);
         this.url = url;
     }
 
     public RequestBuilder() {
+        super();
     }
 
     @Override

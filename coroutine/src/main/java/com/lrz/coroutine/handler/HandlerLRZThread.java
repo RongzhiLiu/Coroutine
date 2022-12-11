@@ -8,8 +8,10 @@ import android.os.Message;
 import android.os.MessageQueue;
 import android.os.Process;
 import android.os.SystemClock;
+import android.util.Printer;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
 
 
 /**
@@ -46,7 +48,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         this.isCore = isCore;
         mPriority = priority;
         this.keepTime = keepTime;
-        setDaemon(true);
+        setDaemon(false);
         start();
     }
 
@@ -94,6 +96,25 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
             onLooperPrepared();
             isRunning = true;
             Looper.myQueue().addIdleHandler(this);
+            // 如果是debug 模式将开启任务分发日志
+            if (LLog.logLevel <= LLog.INFO) {
+                Looper.myLooper().setMessageLogging(new Printer() {
+                    private long time;
+                    private String log;
+
+                    @Override
+                    public void println(String x) {
+                        if (time == 0) {
+                            log = x;
+                            time = SystemClock.uptimeMillis();
+                        } else {
+                            LLog.i(TAG, "耗时=" + (SystemClock.uptimeMillis() - time) + log);
+                            time = 0;
+                            log = null;
+                        }
+                    }
+                });
+            }
             Looper.loop();
         } finally {
             mLooper = null;
@@ -138,7 +159,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         if (isIdle()) {
             getThreadHandler().removeMessages(Integer.MIN_VALUE);
         }
-        isIdle = job.sysTime > SystemClock.uptimeMillis();
+        isIdle = job.delay > 0;
         boolean result = getThreadHandler().postAtTime(job, job.sysTime);
         if (isIdle) {
             queueIdle();
@@ -174,7 +195,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
             throw new IllegalStateException("this thread is death~,can not use it again");
         }
         if (mHandler == null) {
-            mHandler = new Handler(getLooper());
+            mHandler = new CoroutineHandler(getLooper(), this.getName());
         }
         return mHandler;
     }
@@ -191,7 +212,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         if (looper != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
                 looper.quitSafely();
-            }else {
+            } else {
                 looper.quit();
             }
             return true;
@@ -230,5 +251,18 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         if (!isRunning()) {
             super.start();
         }
+    }
+
+    @Override
+    public String toString() {
+        return "{" +
+                "\"mTid\":" + mTid +
+                ", \"mHandler\":" + "\"" + mHandler + "\"" +
+                ", \"isRunning\":" + isRunning +
+                ", \"isIdle\":" + isIdle +
+                ", \"isCore\":" + isCore +
+                ", \"isDeath\":" + isDeath +
+                ", \"keepTime\":" + keepTime +
+                '}';
     }
 }

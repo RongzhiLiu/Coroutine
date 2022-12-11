@@ -11,6 +11,8 @@ import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
+import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 import com.lrz.coroutine.flow.net.CommonRequest;
@@ -40,10 +42,12 @@ public class FirstFragment extends Fragment {
         return binding.getRoot();
 
     }
+
     Job job;
+
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
+        LLog.logLevel = LLog.WARN;
         binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -55,20 +59,19 @@ public class FirstFragment extends Fragment {
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0;i<5;i++) {
-                    CoroutineLRZContext.ExecuteDelay(Dispatcher.IO, new Runnable() {
-                        @Override
-                        public void run() {
-                            System.out.println("------任务执行" + Thread.currentThread()+"   "+this.hashCode());
-                        }
-                    }, 0);
-
+                for (int i = 0; i < 10; i++) {
                     CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
                         @Override
                         public void run() {
-                            System.out.println("------及时任务执行" + Thread.currentThread()+"   "+this.hashCode());
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                            System.out.println("------任务执行" + Thread.currentThread() + "   " + this.hashCode());
                         }
                     });
+
                 }
             }
         });
@@ -76,7 +79,7 @@ public class FirstFragment extends Fragment {
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (job!=null){
+                if (job != null) {
                     job.cancel();
                     job = null;
                 }
@@ -134,18 +137,18 @@ public class FirstFragment extends Fragment {
             }
         });
 
-//        CommonRequest.Create(new RequestBuilder<String>() {
-//            {
-//                url("https://www.baidu.com");//请求url，也可通过构造函数传入
-//                addParam("wd", "glide");//添加请求参数
-//                json("{}");//在请求体中添加json，在post时生效
-//                addHeader("name", "mark");//添加自定义header
-//            }
-//        }).error(error -> {
-//            Log.e("请求错误", "code=" + error.getCode());
-//        }).subscribe(s -> {
-//            Log.e("请求成功", "data=" + s);
-//        }).POST();
+        CommonRequest.Create(new RequestBuilder<String>() {
+            {
+                url("https://www.baidu.com");//请求url，也可通过构造函数传入
+                addParam("wd", "glide");//添加请求参数
+                json("{}");//在请求体中添加json，在post时生效
+                addHeader("name", "mark");//添加自定义header
+            }
+        }).error(error -> {
+            Log.e("请求错误", "code=" + error.getCode());
+        }).subscribe(s -> {
+            Log.e("请求成功", "data=" + s);
+        }).POST();
 //
 //
 //        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {

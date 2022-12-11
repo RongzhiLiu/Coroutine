@@ -32,6 +32,10 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
      */
     private final int MAX_COUNT = Math.max(Runtime.getRuntime().availableProcessors(), 2);
     /**
+     * 最大弹性线程数量
+     */
+    private int ELASTIC_COUNT = MAX_COUNT / 2 > 1 ? MAX_COUNT / 2 : 2;
+    /**
      * 后台线程数的一半，最小是1
      */
     private final int MAX_BACKGROUND = Runtime.getRuntime().availableProcessors() / 4 > 0 ? Runtime.getRuntime().availableProcessors() / 4 : 1;
@@ -183,7 +187,6 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
             }
             if (isBusy && (thief = getThreadHandler(dispatcher, false)) != null) {
                 if (!thief.execute(job.handlerThread(thief))) {
-                    LLog.w(TAG, job.getDispatcher().name() + "：thread steal job failed，name =  " + ((Thread) thief).getName());
                     addToJobQueue(job.handlerThread(null));
                 } else {
                     LLog.d(TAG, ((Thread) thief).getName() + " steal a job and do it");
@@ -244,7 +247,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
                  */
                 if (handler == null && needCreate
                         //核心线程数量没有达到最大           核心线程数达到最大，非核心线程数量没有达到最大，且任务队列积压
-                        && (runningCount < MAX_COUNT || (runningCount < MAX_COUNT + 2 && jobQueue.size() > MAX_COUNT * 2))) {
+                        && (runningCount < MAX_COUNT || (runningCount < MAX_COUNT + ELASTIC_COUNT && jobQueue.size() > MAX_COUNT * 2))) {
                     IHandlerThread handlerThread = createThread(dispatcher);
                     LLog.d(TAG, "thread create,num=" + runningCount + ",name=" + ((Thread) handlerThread).getName() + ",isCore=" + handlerThread.isCore());
                     threadPool.add(handlerThread);
@@ -366,5 +369,10 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     @Override
     public void setKeepTime(long keepTime) {
         this.keepTime = keepTime;
+    }
+
+    @Override
+    public void setElasticCount(int count) {
+        this.ELASTIC_COUNT = count;
     }
 }

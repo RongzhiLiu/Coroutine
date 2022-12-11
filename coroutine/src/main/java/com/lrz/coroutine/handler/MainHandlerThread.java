@@ -22,7 +22,7 @@ class MainHandlerThread implements IHandlerThread {
     @Override
     public synchronized Handler getThreadHandler() {
         if (mHandler == null) {
-            mHandler = new Handler(Looper.getMainLooper());
+            mHandler = new CoroutineHandler(Looper.getMainLooper(),"MAIN");
         }
         return mHandler;
     }

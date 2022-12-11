@@ -20,4 +20,6 @@ public final class ResponseCode {
     public static final int CODE_ERROR_LOCAL = 4;
     // 请求被取消
     public static final int CODE_ERROR_REQUEST_CANCEL = 5;
+
+    public static final int CODE_ERROR_THREAD = 6;
 }

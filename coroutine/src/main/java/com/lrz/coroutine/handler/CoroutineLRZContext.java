@@ -42,6 +42,10 @@ public interface CoroutineLRZContext {
         INSTANCE.setKeepTime(time);
     }
 
+    static void SetElasticCount(int count){
+        INSTANCE.setElasticCount(count);
+    }
+
     /**
      * 启动异步任务
      *
@@ -99,8 +103,16 @@ public interface CoroutineLRZContext {
      *
      * @param task 任务
      * @param <T>  范型及task任务的返回值类型
-     * @return
+     * @return 可订阅的Observable
      */
     <T> Observable<T> create(Task<T> task);
+
+
+    /**
+     * 设置非核心线程最大数量，非核心线程在空闲KeepTime后将结束
+     * 一般用于突发性的并发任务，移动平台该数量不应设置过大
+     * @param count 非核心线程最大数量
+     */
+    void setElasticCount(int count);
 
 }

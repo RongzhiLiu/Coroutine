@@ -8,18 +8,22 @@ import android.util.Log;
  * Description:
  */
 public class LLog {
-    public static boolean DEBUG = false;
+    public static byte logLevel = 0;
+    public static final byte INFO = 0;
+    public static final byte DEBUG = 1;
+    public static final byte WARN = 2;
+    public static final byte ERROR = 3;
 
     static {
         if (BuildConfig.DEBUG) {
-            DEBUG = true;
+            logLevel = INFO;
         }
     }
 
     public static void i(String tag, String log) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
+        if (logLevel <= INFO) {
             Log.i(tag, log);
         }
     }
@@ -27,16 +31,15 @@ public class LLog {
     public static void i(String tag, String log, Throwable e) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
-            Log.i(tag, log);
-            e.printStackTrace();
+        if (logLevel <= INFO) {
+            Log.i(tag, log, e);
         }
     }
 
     public static void d(String tag, String log) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
+        if (logLevel <= DEBUG) {
             Log.d(tag, log);
         }
     }
@@ -44,16 +47,15 @@ public class LLog {
     public static void d(String tag, String log, Throwable e) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
-            Log.d(tag, log);
-            e.printStackTrace();
+        if (logLevel <= DEBUG) {
+            Log.d(tag, log, e);
         }
     }
 
     public static void e(String tag, String log) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
+        if (logLevel <= ERROR) {
             Log.e(tag, log);
         }
     }
@@ -61,17 +63,24 @@ public class LLog {
     public static void e(String tag, String log, Throwable e) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
-            Log.e(tag, log);
-            e.printStackTrace();
+        if (logLevel <= ERROR) {
+            Log.e(tag, log, e);
         }
     }
 
     public static void w(String tag, String log) {
         if (tag == null || log == null)
             return;
-        if (DEBUG) {
+        if (logLevel <= WARN) {
             Log.w(tag, log);
+        }
+    }
+
+    public static void w(String tag, String log, Throwable e) {
+        if (tag == null || log == null)
+            return;
+        if (logLevel <= WARN) {
+            Log.w(tag, log, e);
         }
     }
 }

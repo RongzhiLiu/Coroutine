@@ -5,6 +5,7 @@ import android.text.TextUtils;
 
 import com.google.gson.Gson;
 
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -12,12 +13,14 @@ import java.io.IOException;
 import java.util.Map;
 
 import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 /**
  * Author And Date: liurongzhi on 2020/7/28.
@@ -28,6 +31,7 @@ public class CommonRequest {
     // code的值不等于200，则表示服务获取失败
     private static String codeStr;
     private static String msgStr;
+    private static final Gson GSON = new Gson();
     //设置是否输出日志
     public static volatile boolean logEnable = true;
 
@@ -76,6 +80,9 @@ public class CommonRequest {
         }
         OkHttpClient mOkHttp = HttpClient.instance.getClient();
         HttpUrl httpUrl = HttpUrl.parse(url);
+        if (httpUrl == null) {
+            throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
+        }
         HttpUrl.Builder httpBuilder = httpUrl.newBuilder();
         if (params != null && !params.isEmpty()) {
             for (String key : params.keySet()) {
@@ -116,6 +123,9 @@ public class CommonRequest {
 
         OkHttpClient mOkHttp = HttpClient.instance.getClient();
         HttpUrl httpUrl = HttpUrl.parse(url);
+        if (httpUrl == null) {
+            throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
+        }
         RequestBody requestBody;
         FormBody.Builder formBuilder = new FormBody.Builder();
         if (params != null && !params.isEmpty()) {
@@ -141,7 +151,7 @@ public class CommonRequest {
 
     private <D> D execute(OkHttpClient mOkHttp, okhttp3.Request.Builder builder, Class<D> dClass, int tag) throws RequestException {
         if (Looper.getMainLooper() == Looper.myLooper()) {
-            throw new RequestException("can not request in main thread!", ResponseCode.CODE_ERROR_IO);
+            throw new RequestException("can not request in main thread!", ResponseCode.CODE_ERROR_THREAD);
         }
         Call call;
         Response response;
@@ -151,11 +161,12 @@ public class CommonRequest {
         } catch (Exception e) {
             throw new RequestException("Network exception, please check the network! or look at Caused by ...", e, ResponseCode.CODE_ERROR_NO_NET);
         }
-        if (response.body() != null) {
+        ResponseBody body = response.body();
+        if (body != null) {
             if (response.code() == 200) {
                 final String json;
                 try {
-                    json = response.body().string();
+                    json = body.string();
                 } catch (IOException e) {
                     throw new RequestException("response.body stream read error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_IO);
                 }
@@ -176,12 +187,13 @@ public class CommonRequest {
                     return (D) json;
                 } else {
                     try {
-                        return new Gson().fromJson(json, dClass);
+                        return GSON.fromJson(json, dClass);
                     } catch (Exception e) {
                         throw new RequestException("json decode error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_JSON_FORMAT);
                     }
                 }
             } else {
+                body.close();
                 throw new RequestException("Request Error, please check the error code!", response.code());
             }
         } else {
@@ -195,6 +207,9 @@ public class CommonRequest {
         }
         OkHttpClient mOkHttp = HttpClient.instance.getClient();
         HttpUrl httpUrl = HttpUrl.parse(url);
+        if (httpUrl == null) {
+            throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
+        }
         RequestBody requestBody = FormBody.create(MediaType.parse("application/json; charset=utf-8"), json);
 
         HttpUrl.Builder httpBuilder = httpUrl.newBuilder();
@@ -217,5 +232,4 @@ public class CommonRequest {
         }
         return execute(mOkHttp, builder, dClass, tag);
     }
-
 }

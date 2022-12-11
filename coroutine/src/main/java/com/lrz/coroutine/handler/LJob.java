@@ -21,7 +21,7 @@ class LJob implements Runnable {
     private volatile boolean isRunning = false;
     private volatile boolean cancel = false;
     volatile long sysTime = 0;
-    private volatile long delay = 0;
+    volatile long delay = 0;
     private volatile boolean isLoop = false;
     /**
      * 额外的方法栈信息，记录了异步在执行之前的发起位置
@@ -180,4 +180,15 @@ class LJob implements Runnable {
         return job;
     }
 
+    @Override
+    public String toString() {
+        return "{" +
+                "\"hash\":" + this.hashCode() +
+                ", \"dispatcher\":" + "\"" + dispatcher + "\"" +
+                ", \"thread\":" + iHandlerThread +
+                ", \"sysTime\":" + sysTime +
+                ", \"delay\":" + delay +
+                ", \"isLoop\":" + isLoop +
+                '}';
+    }
 }
