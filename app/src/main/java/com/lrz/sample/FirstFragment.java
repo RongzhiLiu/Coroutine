@@ -1,7 +1,9 @@
 package com.lrz.sample;
 
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
+import android.util.Printer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,6 +50,12 @@ public class FirstFragment extends Fragment {
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         LLog.logLevel = LLog.WARN;
+        Looper.getMainLooper().setMessageLogging(new Printer() {
+            @Override
+            public void println(String x) {
+                Log.e("log",x);
+            }
+        });
         binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -59,6 +67,7 @@ public class FirstFragment extends Fragment {
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.e("click","",new Throwable());
                 for (int i = 0; i < 10; i++) {
                     CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
                         @Override

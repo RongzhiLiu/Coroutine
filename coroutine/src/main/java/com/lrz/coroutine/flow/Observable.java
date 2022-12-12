@@ -4,12 +4,15 @@ import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.coroutine.handler.Job;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 /**
  * Author:  liurongzhi
  * CreateTime:  2022/9/22
  * Description:
  */
-public class Observable<T> {
+public class Observable<T> implements Closeable {
     // 观察者线程
     protected Dispatcher dispatcher;
     // 执行者线程
@@ -286,5 +289,10 @@ public class Observable<T> {
         //向上递归取消
         Observable<?> observable = preObservable;
         observable.cancel();
+    }
+
+    @Override
+    public void close() {
+        cancel();
     }
 }

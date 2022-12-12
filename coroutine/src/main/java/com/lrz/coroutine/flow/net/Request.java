@@ -2,6 +2,7 @@ package com.lrz.coroutine.flow.net;
 
 import com.lrz.coroutine.flow.Observable;
 
+import java.io.Closeable;
 import okhttp3.Call;
 
 /**
@@ -9,7 +10,7 @@ import okhttp3.Call;
  * CreateTime:  2022/11/17
  * Description:
  */
-public class Request {
+public class Request implements Closeable {
     private final Observable observable;
 
     public Request(Observable observable) {
@@ -32,5 +33,10 @@ public class Request {
                 }
             }
         }
+    }
+
+    @Override
+    public void close() {
+        cancel();
     }
 }

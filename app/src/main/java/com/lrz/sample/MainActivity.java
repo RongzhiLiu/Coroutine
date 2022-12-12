@@ -6,6 +6,8 @@ import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.navigation.NavController;
@@ -22,6 +24,12 @@ public class MainActivity extends AppCompatActivity {
 
     private AppBarConfiguration appBarConfiguration;
     private ActivityMainBinding binding;
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        Log.e("dispatchTouchEvent","",new Throwable());
+        return super.dispatchTouchEvent(ev);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

@@ -1,12 +1,13 @@
 package com.lrz.coroutine.handler;
 
+import java.io.Closeable;
 import java.lang.ref.WeakReference;
 
 /**
  * Author And Date: liurongzhi on 2020/12/7.
  * Description: com.yilan.sdk.common.executor.handler
  */
-public class Job {
+public class Job implements Closeable {
     Job next;
     private WeakReference<LJob> job;
     private int jobHash = 0x000000;
@@ -28,5 +29,9 @@ public class Job {
             next.cancel();
             next = null;
         }
+    }
+    @Override
+    public void close() {
+        cancel();
     }
 }

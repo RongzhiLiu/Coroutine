@@ -6,7 +6,7 @@
 #### 一.导入库
 
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.0.6'
+implementation 'com.github.RongzhiLiu:Coroutine:1.0.7'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'
@@ -133,6 +133,13 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @param time 毫秒
      */
     void SetKeepTime(long time);
+
+	/** 
+     * 设置非核心线程最大数量，非核心线程在空闲KeepTime后将结束(1.0.7版本新增)
+     * 一般用于突发性的并发任务，移动平台该数量不应设置过大
+     * @param count 非核心线程最大数量，默认非核心线程数量是核心线程数的一半
+     */
+    void setElasticCount(int count);
 ```
 
 #### 四.高级用法一
