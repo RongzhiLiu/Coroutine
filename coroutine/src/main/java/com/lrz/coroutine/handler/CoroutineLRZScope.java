@@ -50,6 +50,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         if (o2.runnable instanceof PriorityRunnable) {
             x2 = ((PriorityRunnable) o2.runnable).getPriority().ordinal();
         }
+        if (x1 == x2) return (o1.sysTime > o2.sysTime ? 1 : -1);
         return x2 - x1;
     });
     /**
@@ -136,6 +137,14 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
 
     private void doExecute(LJob job) {
         if (job.runnable == null) return;
+        /*
+            当sysTime是0时，表示是及时任务
+            sysTime如果为0就会强制插入到MessageQueue头部，将会破坏执行顺序
+            所以此处要对sysTime进行赋值
+         */
+        if (job.sysTime == 0) {
+            job.delayTime(0);
+        }
         /*
          * 处理调用栈，增加自定义调用栈，方便问题定位
          */

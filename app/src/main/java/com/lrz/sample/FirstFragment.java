@@ -49,13 +49,6 @@ public class FirstFragment extends Fragment {
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        LLog.logLevel = LLog.WARN;
-        Looper.getMainLooper().setMessageLogging(new Printer() {
-            @Override
-            public void println(String x) {
-                Log.e("log",x);
-            }
-        });
         binding.buttonFirst.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -63,11 +56,9 @@ public class FirstFragment extends Fragment {
                         .navigate(R.id.action_FirstFragment_to_SecondFragment);
             }
         });
-
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.e("click","",new Throwable());
                 for (int i = 0; i < 10; i++) {
                     CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
                         @Override
@@ -146,18 +137,18 @@ public class FirstFragment extends Fragment {
             }
         });
 
-        CommonRequest.Create(new RequestBuilder<String>() {
-            {
-                url("https://www.baidu.com");//请求url，也可通过构造函数传入
-                addParam("wd", "glide");//添加请求参数
-                json("{}");//在请求体中添加json，在post时生效
-                addHeader("name", "mark");//添加自定义header
-            }
-        }).error(error -> {
-            Log.e("请求错误", "code=" + error.getCode());
-        }).subscribe(s -> {
-            Log.e("请求成功", "data=" + s);
-        }).POST();
+//        CommonRequest.Create(new RequestBuilder<String>() {
+//            {
+//                url("https://www.baidu.com");//请求url，也可通过构造函数传入
+//                addParam("wd", "glide");//添加请求参数
+//                json("{}");//在请求体中添加json，在post时生效
+//                addHeader("name", "mark");//添加自定义header
+//            }
+//        }).error(error -> {
+//            Log.e("请求错误", "code=" + error.getCode());
+//        }).subscribe(s -> {
+//            Log.e("请求成功", "data=" + s);
+//        }).POST();
 //
 //
 //        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {

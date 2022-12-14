@@ -60,8 +60,7 @@ class MainHandlerThread implements IHandlerThread {
     @Override
     public boolean execute(LJob job) {
         if (getLooper() != null) {
-            getThreadHandler().postAtTime(job, job.sysTime);
-            return true;
+            return getThreadHandler().postAtTime(job, job.sysTime);
         }
         return false;
     }

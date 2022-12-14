@@ -108,7 +108,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
                             log = x;
                             time = SystemClock.uptimeMillis();
                         } else {
-                            LLog.i(TAG, "耗时=" + (SystemClock.uptimeMillis() - time) + log);
+                            LLog.i(TAG, "total time=" + (SystemClock.uptimeMillis() - time) + log);
                             time = 0;
                             log = null;
                         }

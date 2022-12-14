@@ -6,7 +6,10 @@ import com.google.android.material.snackbar.Snackbar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
+import android.util.Printer;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -15,6 +18,7 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.lrz.coroutine.LLog;
 import com.lrz.sample.databinding.ActivityMainBinding;
 
 import android.view.Menu;
@@ -26,15 +30,23 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
 
     @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        Log.e("dispatchTouchEvent","",new Throwable());
-        return super.dispatchTouchEvent(ev);
-    }
-
-    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+//        Looper.getMainLooper().setMessageLogging(new Printer() {
+//            private long time;
+//            private String log;
+//            @Override
+//            public void println(String x) {
+//                if (time == 0) {
+//                    log = x;
+//                    time = SystemClock.uptimeMillis();
+//                } else {
+//                    LLog.i("MAIN", "total time=" + (SystemClock.uptimeMillis() - time) + log);
+//                    time = 0;
+//                    log = null;
+//                }
+//            }
+//        });
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 

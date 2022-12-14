@@ -20,16 +20,19 @@ public class Job implements Closeable {
     }
 
     public void cancel() {
-        if (job != null && job.get() != null && job.get().getRunnableHash() == jobHash && jobHash != 0x000000) {
-            job.get().cancel();
-            job = null;
+        LJob lJob;
+        if (job != null && (lJob = job.get()) != null) {
+            if (lJob.getRunnableHash() == jobHash && jobHash != 0x000000) {
+                lJob.cancel();
+                job = null;
+            }
         }
-
         if (next != null) {
             next.cancel();
             next = null;
         }
     }
+
     @Override
     public void close() {
         cancel();
