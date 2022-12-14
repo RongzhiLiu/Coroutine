@@ -32,8 +32,6 @@ public class CommonRequest {
     private static String codeStr;
     private static String msgStr;
     private static final Gson GSON = new Gson();
-    //设置是否输出日志
-    public static volatile boolean logEnable = true;
 
     /**
      * 设置设置预解析的code字段

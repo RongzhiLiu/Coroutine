@@ -2,6 +2,8 @@ package com.lrz.coroutine.flow.net;
 
 import android.util.Log;
 
+import com.lrz.coroutine.LLog;
+
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -50,13 +52,13 @@ public class HttpClient {
         OkHttpClient.Builder createClient();
     }
 
-    private Interceptor interceptor = new Interceptor() {
+    private final Interceptor interceptor = new Interceptor() {
         @Override
         public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
             Response proceed = chain.proceed(request);
             if (proceed.isSuccessful()) {
-                if (!CommonRequest.logEnable) {
+                if (LLog.logLevel >= LLog.WARN) {
                     return proceed;
                 }
                 logRequest(request);
