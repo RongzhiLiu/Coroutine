@@ -14,7 +14,7 @@ import java.util.concurrent.LinkedBlockingDeque;
  * Description: com.yilan.sdk.common.executor
  */
 class LJob implements Runnable {
-    private final String TAG = "COMMON_JOB";
+    private final String TAG = "COROUTINE_JOB";
     private volatile Dispatcher dispatcher;
     private volatile IHandlerThread iHandlerThread;
     volatile Runnable runnable;

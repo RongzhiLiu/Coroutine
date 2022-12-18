@@ -18,7 +18,7 @@ import java.util.concurrent.PriorityBlockingQueue;
  * Description: com.yilan.sdk.common.executor
  */
 class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandlerThreadListener {
-    private final String TAG = "COMMON_COROUTINE";
+    private final String TAG = "COROUTINE_CONTEXT";
     static final MainHandlerThread mainHandler = new MainHandlerThread();
     private static final ArrayList<IHandlerThread> threadPool = new ArrayList<>();
     private static final ArrayList<IHandlerThread> backPool = new ArrayList<>();

@@ -18,7 +18,7 @@ import com.lrz.coroutine.LLog;
  * 线程类，用于线程池，也可单独使用，作为某一个组件的调度线程，如数据库操作，sp等
  */
 public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQueue.IdleHandler {
-    private final String TAG = "COMMON_COROUTINE_HANDLER";
+    private final String TAG = "COROUTINE_HANDLER";
     int mPriority;
     int mTid = -1;
     private Looper mLooper;
