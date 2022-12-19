@@ -41,6 +41,8 @@ implementation 'com.google.code.gson:gson:2.8.5'
 #### 三.异步的简单使用:
 
 ```java
+//日志开关,正式环境可将其设置为ERROR，调试时设置为INFO或DEBUG
+LLog.logLevel = LLog.INFO;//LLog.DEBUG,LLog.WARN,LLog.ERROR
 // 发起异步任务
 Job job = CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
             @Override
