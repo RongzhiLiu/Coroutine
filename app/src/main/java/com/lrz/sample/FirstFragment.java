@@ -1,20 +1,22 @@
 package com.lrz.sample;
 
+import android.os.Build;
 import android.os.Bundle;
-import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
-import android.util.Printer;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
-import com.lrz.coroutine.LLog;
-import com.lrz.coroutine.Priority;
+import com.lrz.coroutine.flow.Error;
+import com.lrz.coroutine.flow.Function;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 import com.lrz.coroutine.flow.net.CommonRequest;
@@ -59,20 +61,23 @@ public class FirstFragment extends Fragment {
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0; i < 10; i++) {
-                    CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Thread.sleep(1000);
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
-                            }
-                            System.out.println("------任务执行" + Thread.currentThread() + "   " + this.hashCode());
-                        }
-                    });
-
-                }
+                CoroutineLRZContext.Create(new Task<String>() {
+                    @Override
+                    public String submit() {
+                        return "null";
+                    }
+                }).subscribe(new Observer<String>() {
+                    @Override
+                    public void onSubscribe(String s) {
+                        System.out.println("onSubscribe--------thread=" + Thread.currentThread().getName());
+                        int i = 1 / 0;
+                    }
+                }).error(new Error() {
+                    @Override
+                    public void onError(Throwable error) {
+                        System.out.println("error--------thread=" + Thread.currentThread().getName());
+                    }
+                }).execute(Dispatcher.IO);
             }
         });
 
@@ -83,6 +88,15 @@ public class FirstFragment extends Fragment {
                     job.cancel();
                     job = null;
                 }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+                    long start = SystemClock.uptimeMillis();
+                    for (int i = 0; i < 100000; i++) {
+                        String s = WebSettings.getDefaultUserAgent(getActivity());
+                    }
+
+                    System.out.println("-----time = " + (SystemClock.uptimeMillis() - start));
+                }
+
 //                for (int i = 0; i < 5; i++) {
 //                    synchronized (FirstFragment.this) {
 //                        mainExe += 1;
@@ -137,29 +151,33 @@ public class FirstFragment extends Fragment {
             }
         });
 
-//        CommonRequest.Create(new RequestBuilder<String>() {
-//            {
-//                url("https://www.baidu.com");//请求url，也可通过构造函数传入
-//                addParam("wd", "glide");//添加请求参数
-//                json("{}");//在请求体中添加json，在post时生效
-//                addHeader("name", "mark");//添加自定义header
-//            }
-//        }).error(error -> {
-//            Log.e("请求错误", "code=" + error.getCode());
-//        }).subscribe(s -> {
-//            Log.e("请求成功", "data=" + s);
-//        }).POST();
+        Request request = CommonRequest.Create(new RequestBuilder<String>() {
+            {
+                url("https://www.baidu.com");//请求url，也可通过构造函数传入
+                addParam("wd", "glide");//添加请求参数
+                json("{}");//在请求体中添加json，在post时生效
+                addHeader("name", "mark");//添加自定义header
+            }
+        }).error(error -> {
+            Log.e("请求错误", "code=" + error.getCode());
+        }).map(new Function<String, Bean>() {
+            @Override
+            public Bean apply(String s) {
+                return new Bean(s);
+            }
+        }).subscribe(s -> {
+            Log.e("请求成功", "data=" + s);
+        }).POST();
 //
-//
-//        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {
-//            {
-//                url("url");// 代码块里的url 和构造函数中的url 选一即可，不用都写
-//                addParam("key", "value");
-//                addHeader("header", "value");
-//                json("{}");//在POST请求时上传json，只在POST()时有效
-//            }
-//        };
-//
+        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {
+            {
+                url("url");// 代码块里的url 和构造函数中的url 选一即可，不用都写
+                addParam("key", "value");
+                addHeader("header", "value");
+                json("{}");//在POST请求时上传json，只在POST()时有效
+            }
+        };
+
 //        Request request = CommonRequest.Create(requestBuilder)
 //                .error(error -> {
 //                    error.printStackTrace();
@@ -211,7 +229,6 @@ public class FirstFragment extends Fragment {
 //        }).map().subscribe(bean -> { //第二个订阅者
 //            Log.i("Coroutine", bean);
 //        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
-
 
     }
 

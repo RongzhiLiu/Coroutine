@@ -193,8 +193,9 @@ public class Observable<T> implements Closeable {
      * @return
      */
     protected Task<?> getTask() {
-        if (preObservable != null) {
-            return preObservable.getTask();
+        Observable pre = preObservable;
+        if (pre != null) {
+            return pre.getTask();
         }
         return task;
     }
@@ -288,7 +289,9 @@ public class Observable<T> implements Closeable {
         result = null;
         //向上递归取消
         Observable<?> observable = preObservable;
-        observable.cancel();
+        if (preObservable != null) {
+            observable.cancel();
+        }
     }
 
     @Override
