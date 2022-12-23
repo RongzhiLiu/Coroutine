@@ -151,32 +151,32 @@ public class FirstFragment extends Fragment {
             }
         });
 
-        Request request = CommonRequest.Create(new RequestBuilder<String>() {
-            {
-                url("https://www.baidu.com");//请求url，也可通过构造函数传入
-                addParam("wd", "glide");//添加请求参数
-                json("{}");//在请求体中添加json，在post时生效
-                addHeader("name", "mark");//添加自定义header
-            }
-        }).error(error -> {
-            Log.e("请求错误", "code=" + error.getCode());
-        }).map(new Function<String, Bean>() {
-            @Override
-            public Bean apply(String s) {
-                return new Bean(s);
-            }
-        }).subscribe(s -> {
-            Log.e("请求成功", "data=" + s);
-        }).POST();
+//        Request request = CommonRequest.Create(new RequestBuilder<String>() {
+//            {
+//                url("https://www.baidu.com");//请求url，也可通过构造函数传入
+//                addParam("wd", "glide");//添加请求参数
+//                json("{}");//在请求体中添加json，在post时生效
+//                addHeader("name", "mark");//添加自定义header
+//            }
+//        }).error(error -> {
+//            Log.e("请求错误", "code=" + error.getCode());
+//        }).map(new Function<String, Bean>() {
+//            @Override
+//            public Bean apply(String s) {
+//                return new Bean(s);
+//            }
+//        }).subscribe(s -> {
+//            Log.e("请求成功", "data=" + s);
+//        }).POST();
 //
-        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {
-            {
-                url("url");// 代码块里的url 和构造函数中的url 选一即可，不用都写
-                addParam("key", "value");
-                addHeader("header", "value");
-                json("{}");//在POST请求时上传json，只在POST()时有效
-            }
-        };
+//        RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url") {
+//            {
+//                url("url");// 代码块里的url 和构造函数中的url 选一即可，不用都写
+//                addParam("key", "value");
+//                addHeader("header", "value");
+//                json("{}");//在POST请求时上传json，只在POST()时有效
+//            }
+//        };
 
 //        Request request = CommonRequest.Create(requestBuilder)
 //                .error(error -> {

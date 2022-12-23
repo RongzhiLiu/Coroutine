@@ -22,13 +22,13 @@ public class Observable<T> implements Closeable {
     protected Function<T, ?> map;
     protected IError<Throwable> error;
     protected Dispatcher errorDispatcher;
-    protected Job job;
+    protected volatile Job job;
 
     /**
      * 双向链表结构，用于管理责任链中的 Observable，当使用map 函数时，会生成链表
      */
-    protected Observable preObservable;
-    protected Observable nextObservable;
+    protected volatile Observable preObservable;
+    protected volatile Observable nextObservable;
 
     public Observable(Task<T> task) {
         if (task == null) {
@@ -278,7 +278,7 @@ public class Observable<T> implements Closeable {
     /**
      * 取消任务执行
      */
-    public void cancel() {
+    public synchronized void cancel() {
         if (job != null) {
             job.cancel();
             job = null;
@@ -289,7 +289,7 @@ public class Observable<T> implements Closeable {
         result = null;
         //向上递归取消
         Observable<?> observable = preObservable;
-        if (preObservable != null) {
+        if (observable != null) {
             observable.cancel();
         }
     }
