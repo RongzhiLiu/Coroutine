@@ -4,7 +4,10 @@
 ​		**后来不断的在业务和框架之间切换，在线程池的基础上，增加了事件流的控制，对网络请求这种特别的异步操作，增加了对okhttp 的支持，他比retrofit更加轻量，使用更加优雅。欢迎大家提出宝贵意见**
 
 #### 一.导入库
-
+```java
+// 在project下的build.gradle中添加如下maven地址
+maven { url 'https://jitpack.io' }
+```        
 ```java
 implementation 'com.github.RongzhiLiu:Coroutine:1.0.8'
 // 如果需要使用 http 请求功能，请添加以下依赖
