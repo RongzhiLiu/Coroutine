@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 
 
-
 /**
  * Author:  liurongzhi
  * CreateTime:  2022/12/10
@@ -18,7 +17,7 @@ public class CoroutineHandler extends Handler {
      */
     @Override
     public String toString() {
-        return threadName;
+        return "CoroutineHandler=" + threadName;
     }
 
     public CoroutineHandler(Looper looper, String threadName) {

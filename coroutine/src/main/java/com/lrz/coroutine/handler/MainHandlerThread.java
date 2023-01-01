@@ -4,7 +4,6 @@ import android.os.Handler;
 import android.os.Looper;
 
 import com.lrz.coroutine.Dispatcher;
-import com.lrz.coroutine.LLog;
 
 /**
  * Author And Date: liurongzhi on 2020/3/1.
@@ -14,15 +13,16 @@ class MainHandlerThread implements IHandlerThread {
     private volatile Handler mHandler;
 
     public MainHandlerThread() {
-        synchronized (this) {
-            mHandler = new Handler(Looper.getMainLooper());
-        }
+
     }
 
     @Override
-    public synchronized Handler getThreadHandler() {
+    public Handler getThreadHandler() {
         if (mHandler == null) {
-            mHandler = new CoroutineHandler(Looper.getMainLooper(),"MAIN");
+            synchronized (this) {
+                if (mHandler == null)
+                    mHandler = new CoroutineHandler(Looper.getMainLooper(), "MAIN");
+            }
         }
         return mHandler;
     }
@@ -34,7 +34,6 @@ class MainHandlerThread implements IHandlerThread {
 
     @Override
     public boolean quit() {
-        LLog.e("YY_MainHandler", "main looper can not be quit!");
         return false;
     }
 
@@ -60,9 +59,9 @@ class MainHandlerThread implements IHandlerThread {
     @Override
     public boolean execute(LJob job) {
         if (getLooper() != null) {
-            return getThreadHandler().postAtTime(job, job.sysTime);
+            getThreadHandler().postAtTime(job, job.sysTime);
         }
-        return false;
+        return true;
     }
 
     @Override

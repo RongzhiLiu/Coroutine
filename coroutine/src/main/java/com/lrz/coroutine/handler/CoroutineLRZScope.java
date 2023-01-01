@@ -42,7 +42,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     /**
      * 工作队列已满，放到此容器中暂存
      */
-    private static final PriorityBlockingQueue<LJob> jobQueue = new PriorityBlockingQueue<>(6, (o1, o2) -> {
+    private final PriorityBlockingQueue<LJob> jobQueue = new PriorityBlockingQueue<>(MAX_COUNT, (o1, o2) -> {
         int x1 = Priority.MEDIUM.ordinal(), x2 = Priority.MEDIUM.ordinal();
         if (o1.runnable instanceof PriorityRunnable) {
             x1 = ((PriorityRunnable) o1.runnable).getPriority().ordinal();
@@ -56,7 +56,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     /**
      * 后台任务，用来执行不紧急的任务,线程安全的链表
      */
-    private static final LinkedBlockingDeque<LJob> backgroundJobs = new LinkedBlockingDeque<>();
+    private final LinkedBlockingDeque<LJob> backgroundJobs = new LinkedBlockingDeque<>();
 
     private HandlerLRZThread createThread(Dispatcher dispatcher) {
         HandlerLRZThread thread;
@@ -185,6 +185,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
             //如果该任务是BACKGROUND，且此时BACKGROUND已经满载，且backgroundJobs任务堆积(线程数量的2倍)，则IO中的空闲非核心线程将尝试窃取任务执行
             //如果是io满载，且任务队列达到 MAX_COUNT,则BACKGROUND中空闲的非核心线程尝试窃取任务执行
             IHandlerThread thief;
+            if (job.getDispatcher() == Dispatcher.MAIN) return;
             Dispatcher dispatcher = job.getDispatcher() == Dispatcher.IO ? Dispatcher.BACKGROUND : Dispatcher.IO;
             //判断线程池是否繁忙，1.当前核心线程数量是否已经达到最大 2.当前任务队列是否已经超载
             boolean isBusy;
@@ -252,7 +253,8 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
 
                     此处创建新线程的条件：
                         1 核心线程数量没有达到最大，则创建
-                        2 核心线程数达到最大，非核心线程数量没有达到最大，且任务队列积压，
+                        2 核心线程数达到最大，非核心线程数量没有达到最大，且任务队列积压
+                            任务队列积压情况，如果当前任务数量>MAX_COUNT * 2
                  */
                 if (handler == null && needCreate
                         //核心线程数量没有达到最大           核心线程数达到最大，非核心线程数量没有达到最大，且任务队列积压
