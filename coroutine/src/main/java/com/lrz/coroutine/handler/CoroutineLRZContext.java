@@ -4,11 +4,13 @@ import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.Task;
 
+import java.util.concurrent.Executor;
+
 /**
  * Author And Date: liurongzhi on 2020/2/26.
  * Description: com.yilan.sdk.common.executor
  */
-public interface CoroutineLRZContext {
+public interface CoroutineLRZContext extends Executor {
     /**
      * 全局唯一实例
      */

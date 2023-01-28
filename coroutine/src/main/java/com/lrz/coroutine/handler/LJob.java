@@ -77,11 +77,11 @@ class LJob implements Runnable {
 
 
     public void cancel() {
-        ((CoroutineLRZScope) CoroutineLRZContext.INSTANCE).removeToFromQueue(this);
         synchronized (this) {
             if (dispatcher == null || iHandlerThread == null || cancel) {
                 return;
             }
+            ((CoroutineLRZScope) CoroutineLRZContext.INSTANCE).removeToFromQueue(this);
             cancel = true;
             isRunning = false;
             if (iHandlerThread != null) {

@@ -30,7 +30,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     /**
      * 核心线程数量保持为 cpu 个数，保证并发时的性能
      */
-    private final int MAX_COUNT = Math.max(Runtime.getRuntime().availableProcessors(), 2);
+    private final int MAX_COUNT = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 2);
     /**
      * 最大弹性线程数量
      */
@@ -385,5 +385,15 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     @Override
     public void setElasticCount(int count) {
         this.ELASTIC_COUNT = count;
+    }
+
+    /**
+     * 继承自Executor，让原有线程池切换到此框架更加平滑
+     *
+     * @param command 任务
+     */
+    @Override
+    public void execute(Runnable command) {
+        execute(Dispatcher.IO, command);
     }
 }

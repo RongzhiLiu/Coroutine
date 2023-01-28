@@ -19,7 +19,7 @@ public class ReqObservable<T> extends Observable<T> {
         super(task);
     }
 
-    ReqObservable() {
+    public ReqObservable() {
         super();
     }
 
@@ -67,7 +67,7 @@ public class ReqObservable<T> extends Observable<T> {
         if (error == null) {
             error(new DefReqError());
         }
-        super.execute(dispatcher);
+        execute(dispatcher);
         return new Request(this);
     }
 
@@ -82,7 +82,7 @@ public class ReqObservable<T> extends Observable<T> {
         if (error == null) {
             error(new DefReqError());
         }
-        super.execute(dispatcher);
+        execute(dispatcher);
         return new Request(this);
     }
 

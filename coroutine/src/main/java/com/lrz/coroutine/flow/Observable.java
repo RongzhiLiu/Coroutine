@@ -1,6 +1,7 @@
 package com.lrz.coroutine.flow;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.coroutine.handler.Job;
 
@@ -192,7 +193,7 @@ public class Observable<T> implements Closeable {
      *
      * @return
      */
-    protected Task<?> getTask() {
+    protected synchronized Task<?> getTask() {
         Observable pre = preObservable;
         if (pre != null) {
             return pre.getTask();
@@ -277,11 +278,14 @@ public class Observable<T> implements Closeable {
 
     /**
      * 取消任务执行
+     * cancel 是向上传递取消任务流
+     * 思考，如果当前observable 处在任务流中间呢，应该如果处置
      */
     public synchronized void cancel() {
         if (job != null) {
             job.cancel();
             job = null;
+            LLog.d("COROUTINE_OBS", "observable stream close");
         }
         task = null;
         map = null;
@@ -290,8 +294,19 @@ public class Observable<T> implements Closeable {
         //向上递归取消
         Observable<?> observable = preObservable;
         if (observable != null) {
+            //断开双向链表
+            observable.nextObservable = null;
             observable.cancel();
         }
+        preObservable = null;
+
+        Observable<?> next = nextObservable;
+        if (next != null) {
+            //断开双向链表
+            next.preObservable = null;
+            next.cancel();
+        }
+        nextObservable = null;
     }
 
     @Override

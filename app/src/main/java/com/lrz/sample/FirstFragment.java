@@ -97,89 +97,19 @@ public class FirstFragment extends Fragment {
                     System.out.println("-----time = " + (SystemClock.uptimeMillis() - start));
                 }
 
-//                for (int i = 0; i < 5; i++) {
-//                    synchronized (FirstFragment.this) {
-//                        mainExe += 1;
-//                    }
-//                    CoroutineLRZContext.Create(new Task<String>() {
-//                        @Override
-//                        public String submit() {
-//                            return Thread.currentThread().getName();
-//                        }
-//                    }).subscribe(new Observer<String>() {
-//                        @Override
-//                        public void onSubscribe(String s) {
-//                            synchronized (FirstFragment.this) {
-//                                mainSub += 1;
-//                                System.out.println("-----main 完成：发起了" + mainExe + " ,共完成：" + mainSub + "  thread=" + s);
-//                            }
-//
-//                        }
-//                    }).execute(Dispatcher.MAIN);
-//                }
             }
         });
-        CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
-            @Override
-            public void run() {
-                String name = Thread.currentThread().getName();
-                System.out.println("---------io=" + name);
-            }
-        });
-        System.out.println("---------当前主线程=" + Thread.currentThread().getName());
-        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-            @Override
-            public void run() {
-//                String name = Thread.currentThread().getName();
-//                if (!name.contains("main")) {
-//                    System.out.println("++++++不符合预期=" + name);
-//                }
-                int i= 1/0;
-            }
-        }, 3000);
-        CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < 10000; i++) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    System.out.println("++++++1 send");
-                    CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-                        @Override
-                        public void run() {
-                            String name = Thread.currentThread().getName();
-                            System.out.println("++++++1 do=" + name);
-                        }
-                    }, 1);
-                }
-            }
-        });
-
-        CoroutineLRZContext.ExecuteTime(Dispatcher.IO, new Runnable() {
-            @Override
-            public void run() {
-                for (int i = 0; i < 10; i++) {
-                    System.out.println("++++++2 send");
-                    CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-                        @Override
-                        public void run() {
-                            String name = Thread.currentThread().getName();
-                            System.out.println("++++++2 do=" + name);
-
-                        }
-                    }, 1);
-                }
-            }
-        }, 200);
-
 
         binding.buttonBackground.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                getActivity().finish();
+                System.out.println("-------start "+SystemClock.uptimeMillis());
+                CoroutineLRZContext.ExecuteTime(Dispatcher.MAIN, new Runnable() {
+                    @Override
+                    public void run() {
+                        System.out.println("-------ExecuteTime ");
+                    }
+                },1000);
             }
         });
 
