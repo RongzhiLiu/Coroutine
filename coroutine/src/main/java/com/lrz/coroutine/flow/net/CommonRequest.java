@@ -4,8 +4,6 @@ import android.os.Looper;
 import android.text.TextUtils;
 
 import com.google.gson.Gson;
-
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -13,7 +11,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
@@ -55,9 +52,12 @@ public class CommonRequest {
     }
 
 
-    private final String TAG = "COMMON_REQUEST";
-    public static final CommonRequest request = new CommonRequest();
+    public static final CommonRequest request = new CommonRequest(HttpClient.instance.getClient());
+    private final OkHttpClient client;
 
+    public CommonRequest(OkHttpClient client) {
+        this.client = client;
+    }
 
     public <D> D requestGet(String url, Class<D> dClass) throws RequestException {
         return requestGet(url, null, dClass, null, 0);
@@ -76,7 +76,7 @@ public class CommonRequest {
         if (url == null || url.length() < 1) {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
-        OkHttpClient mOkHttp = HttpClient.instance.getClient();
+        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
@@ -119,7 +119,7 @@ public class CommonRequest {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
 
-        OkHttpClient mOkHttp = HttpClient.instance.getClient();
+        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
@@ -203,7 +203,7 @@ public class CommonRequest {
         if (url == null || url.length() < 1) {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
-        OkHttpClient mOkHttp = HttpClient.instance.getClient();
+        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);

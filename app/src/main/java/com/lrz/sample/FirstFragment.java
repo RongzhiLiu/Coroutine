@@ -1,29 +1,26 @@
 package com.lrz.sample;
 
-import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.WebSettings;
-import android.webkit.WebView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
-import com.lrz.coroutine.flow.Error;
-import com.lrz.coroutine.flow.Function;
+import com.lrz.coroutine.flow.Observable;
+import com.lrz.coroutine.flow.ObservableSet;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 import com.lrz.coroutine.flow.net.CommonRequest;
-import com.lrz.coroutine.flow.net.Request;
+import com.lrz.coroutine.flow.net.Method;
+import com.lrz.coroutine.flow.net.ReqObservable;
 import com.lrz.coroutine.flow.net.RequestBuilder;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
-import com.lrz.coroutine.handler.Job;
 import com.lrz.sample.databinding.FragmentFirstBinding;
 
 public class FirstFragment extends Fragment {
@@ -47,7 +44,6 @@ public class FirstFragment extends Fragment {
 
     }
 
-    Job job;
 
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
@@ -72,44 +68,27 @@ public class FirstFragment extends Fragment {
                         System.out.println("onSubscribe--------thread=" + Thread.currentThread().getName());
                         int i = 1 / 0;
                     }
-                }).error(new Error() {
-                    @Override
-                    public void onError(Throwable error) {
-                        System.out.println("error--------thread=" + Thread.currentThread().getName());
-                    }
-                }).execute(Dispatcher.IO);
+                }).error(error -> System.out.println("error--------thread=" + Thread.currentThread().getName())).execute(Dispatcher.IO);
             }
         });
 
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (job != null) {
-                    job.cancel();
-                    job = null;
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    long start = SystemClock.uptimeMillis();
-                    for (int i = 0; i < 100000; i++) {
-                        String s = WebSettings.getDefaultUserAgent(getActivity());
-                    }
-
-                    System.out.println("-----time = " + (SystemClock.uptimeMillis() - start));
-                }
-
+                streamSet();
             }
         });
 
         binding.buttonBackground.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println("-------start "+SystemClock.uptimeMillis());
+                System.out.println("-------start " + SystemClock.uptimeMillis());
                 CoroutineLRZContext.ExecuteTime(Dispatcher.MAIN, new Runnable() {
                     @Override
                     public void run() {
                         System.out.println("-------ExecuteTime ");
                     }
-                },1000);
+                }, 1000);
             }
         });
 
@@ -180,17 +159,52 @@ public class FirstFragment extends Fragment {
 //            Log.i("CoroutineLRZContext",str);
 //        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
 //
-//
-//        CoroutineLRZContext.Create(new Task<String>() {
-//            @Override
-//            public String submit() {
-//                return "任务结果，由task 的范型来限定返回类型";
-//            }
-//        }).subscribe(Dispatcher.IO, str -> {
-//            Log.i("Coroutine", str);
-//        }).map().subscribe(bean -> { //第二个订阅者
-//            Log.i("Coroutine", bean);
-//        }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+        streamSet();
+    }
+
+    private void streamSet() {
+        Observable<String> observable = CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                Log.i("---任务1", Thread.currentThread().getName());
+                int i = 1 / 0;
+                return "";
+            }
+        }).subscribe(Dispatcher.IO, str -> {
+            Log.i("---任务1-io-subscribe", Thread.currentThread().getName());
+        }).map().subscribe(Dispatcher.IO, bean -> { //第二个订阅者
+            Log.i("---任务1-io2-subscribe", Thread.currentThread().getName());
+        }).thread(Dispatcher.BACKGROUND).delay(1000);//开始执行任务，并指定线程
+
+        Observable<String> observable2 = CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                Log.i("---任务2", Thread.currentThread().getName());
+                return "";
+            }
+        }).subscribe(Dispatcher.IO, str -> {
+            Log.i("---任务2-io-subscribe", Thread.currentThread().getName());
+        }).map().subscribe(Dispatcher.IO, bean -> { //第二个订阅者
+            Log.i("---任务2-io2-subscribe", Thread.currentThread().getName());
+        }).thread(Dispatcher.MAIN);//开始执行任务，并指定线程
+
+        ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
+            {
+                url("https://baidu.com");
+            }
+        }).subscribe(s -> {
+            Log.i("---任务request-subscribe", Thread.currentThread().getName());
+        }).error(e -> {
+            Log.i("---任务request-error", Thread.currentThread().getName());
+            Log.e("", "", e);
+        }).method(Method.GET);
+
+
+        ObservableSet.with(observable, observable2, observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
+            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+        }).error(Dispatcher.MAIN, error -> {
+            Log.i("---set-error", Thread.currentThread().getName());
+        }).execute();
 
     }
 
@@ -198,14 +212,6 @@ public class FirstFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
-    }
-
-    public static class Bean {
-        public String str = "";
-
-        public Bean(String str) {
-            this.str = str;
-        }
     }
 
 }

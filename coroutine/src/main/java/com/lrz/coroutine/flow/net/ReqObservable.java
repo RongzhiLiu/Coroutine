@@ -8,6 +8,8 @@ import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 
+import okhttp3.Call;
+
 /**
  * Author:  liurongzhi
  * CreateTime:  2022/11/15
@@ -24,9 +26,7 @@ public class ReqObservable<T> extends Observable<T> {
     }
 
     public synchronized ReqObservable<T> error(ReqError error) {
-        super.error(error);
-        this.errorDispatcher = Dispatcher.MAIN;
-        return this;
+        return error(Dispatcher.MAIN,error);
     }
 
     public synchronized ReqObservable<T> error(Dispatcher dispatcher, ReqError error) {
@@ -60,15 +60,14 @@ public class ReqObservable<T> extends Observable<T> {
      *
      * @return Request
      */
-    public final synchronized Request GET() {
-        ((RequestBuilder<?>) getTask()).setMethod(0);
+    public final synchronized ReqObservable<T> GET() {
+        ((RequestBuilder<?>) getTask()).method(0);
         // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
-        Dispatcher dispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
-        if (error == null) {
-            error(new DefReqError());
+        if (taskDispatcher == null) {
+            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
-        execute(dispatcher);
-        return new Request(this);
+        execute(taskDispatcher);
+        return this;
     }
 
     /**
@@ -76,14 +75,56 @@ public class ReqObservable<T> extends Observable<T> {
      *
      * @return Request
      */
-    public final synchronized Request POST() {
-        ((RequestBuilder<?>) getTask()).setMethod(1);
-        Dispatcher dispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+    public final synchronized ReqObservable<T> POST() {
+        ((RequestBuilder<?>) getTask()).method(1);
+        if (taskDispatcher == null) {
+            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+        }
+        execute(taskDispatcher);
+        return this;
+    }
+
+    public ReqObservable<T> method(int method) {
+        ((RequestBuilder<?>) getTask()).method(method);
+        return this;
+    }
+
+    @Override
+    public synchronized Observable<T> execute(Dispatcher dispatcher) {
         if (error == null) {
             error(new DefReqError());
         }
-        execute(dispatcher);
-        return new Request(this);
+        return super.execute(dispatcher);
+    }
+
+    @Override
+    public synchronized Observable<T> execute() {
+        if (taskDispatcher == null) {
+            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+        }
+        if (error == null) {
+            error(new DefReqError());
+        }
+        return super.execute();
+    }
+
+    @Override
+    public synchronized void cancel() {
+        super.cancel();
+        if (HttpClient.instance != null) {
+            for (Call call : HttpClient.instance.getClient().dispatcher().queuedCalls()) {
+                if (Integer.valueOf(hashCode()).equals(call.request().tag())) {
+                    call.cancel();
+                    return;
+                }
+            }
+            for (Call call : HttpClient.instance.getClient().dispatcher().runningCalls()) {
+                if (Integer.valueOf(hashCode()).equals(call.request().tag())) {
+                    call.cancel();
+                    return;
+                }
+            }
+        }
     }
 
     @Override

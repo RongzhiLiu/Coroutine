@@ -89,7 +89,12 @@ public abstract class RequestBuilder<B> extends Task<B> {
      *
      * @param method
      */
-    public void setMethod(int method) {
+    public RequestBuilder<B> method(int method) {
         this.method = method;
+        return this;
+    }
+
+    public int getMethod() {
+        return method;
     }
 }

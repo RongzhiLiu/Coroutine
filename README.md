@@ -7,9 +7,9 @@
 ```java
 // 在project下的build.gradle中添加如下maven地址
 maven { url 'https://jitpack.io' }
-```        
+```
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.0.9'
+implementation 'com.github.RongzhiLiu:Coroutine:1.1.1'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'
@@ -76,7 +76,7 @@ job.cancel();
 
 ​	3.Dispatcher.BACKGROUND：在后台线程中执行
 
-**Dispatcher.IO线程最大数量是cpu number，并可弹性2个，非核心线程超过10秒则释放，也可以自定义超时时间**
+**Dispatcher.IO核心线程最大数量是cpu number的80%，非核心线程是核心线程的一半，超过10秒则释放，也可以自定义超时时间** 
 
 **Dispatcher.BACKGROUND：后来线程最大为cpu number/4，最小是1，无非核心线程**
 
@@ -207,6 +207,39 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
     <F> Observable<F> map(Function<T, F> function)
       
     /**
+     * 设置任务延迟时间
+     *
+     * @param delay 任务延迟时间
+     */
+    Observable<T> delay(long delay)
+      
+    /**
+     * 设置任务循环时间间隔
+     *
+     * @param interval 任务循环时间
+     */
+    Observable<T> interval(long interval)
+      
+    /**
+     * 在当前线程执行，该线程可能是thread()设置的，如果是null，则不执行
+     */
+    Observable<T> execute()
+      
+    /**
+     * 在指定线程执行任务
+     */  
+    Observable<T> execute(Dispatcher dispatcher)
+      
+    /**
+     * 在指定线程执行延迟任务
+     */  
+    Observable<T> executeDelay(Dispatcher dispatcher, long delay)  
+      
+    /**
+     * 在指定线程执行循环任务
+     */ 
+    Observable<T> executeTime(Dispatcher dispatcher, long interval)  
+    /**
      * 取消任务执行
      */  
     void cancel()
@@ -263,7 +296,8 @@ observable.cancel();
 ##### 	5.1举例1 多个订阅者时，有未指定线程的订阅者
 
 ```java
-	CoroutineLRZContext.Create(new Task<String>() {
+// 每一个表达式都可以指定线程，如果不指定，则按照最近原则使用上面最近的线程	
+CoroutineLRZContext.Create(new Task<String>() {
 	    @Override
 	    public String submit() {
 	        return "任务结果，由task 的范型来限定返回类型";
@@ -272,11 +306,14 @@ observable.cancel();
 	    Log.i("Coroutine",str);
 	}).map().subscribe(bean -> { //第二个订阅者
 	    Log.i("Coroutine",bean);
-	}).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+	}).error(Dispatcher.MAIN,error -> {
+      Log.e("Coroutine","error",error);
+  }).execute(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
 
 // 上面例子可以看到，第一个订阅者没有指定线程，那么其默认会跟随上一个切换的线程，但是他上面没有别的订阅者改变线程，则其跟随生产者线
 // 程，即Dispatcher.BACKGROUND
 // 第二个订阅者没有指定线程，往上推，第一个订阅者的线程是BACKGROUND，那么他的订阅线程也是BACKGROUND
+// error表达式的线程也是同理（向上靠近原则）
 
 
 CoroutineLRZContext.Create(new Task<String>() {
@@ -292,9 +329,7 @@ CoroutineLRZContext.Create(new Task<String>() {
 // 上面例子，如果我们把第一个订阅者线程指定为IO，第二个订阅者将会跟随第一个订阅者线程，也就是io
 ```
 
-那么通过上面的例子，举一反三，error 的订阅线程 在不指定的情况下也采取就近原则，如果当前Observable没有指定线程，则默认使用
-
-execute所设置的线程。
+那么通过上面的例子，举一反三，error 的订阅线程 在不指定的情况下也采取就近原则，如果所有Observable都没有指定线程，则默认使用execute/thread所设置的线程。
 
 #### 六.高级用法二 如何优雅的发起http请求
 
@@ -338,7 +373,7 @@ RequestBuilder<Bean> requestBuilder = new RequestBuilder<Bean>("url"){
 
 ```java
 // 区别于事件流 在error 和 subscribe 不指定线程的情况下，默认 是 MAIN线程，其他多订阅者等用法和事件流相同
-Request request = CommonRequest.Create(requestBuilder)
+ReqObservable<Bean> request = CommonRequest.Create(requestBuilder)
 		.error(error -> {
 		    error.printStackTrace();
 		    Log.e("请求错误", "code=" + error.getCode() + "   msg=" + error.getMessage());
@@ -346,5 +381,45 @@ Request request = CommonRequest.Create(requestBuilder)
 		    Log.i("请求成功", "data=" + bean.str);
 		}).GET();
 
+```
+
+#### 七.并行事件流（多事件流）
+
+在很多业务场景下，会有多个异步任务并行，并统一监测执行结果
+
+```java
+// 创建第一个事件流
+Observable<String> observable1 = CoroutineLRZContext.Create(new Task<String>() {
+    @Override
+    public String submit() {
+        return "";
+    }
+}).subscribe(Dispatcher.IO, str -> {
+    Log.i("Coroutine",str);
+}).error(error -> {
+    Log.e("Coroutine","error",error);
+}).thread(Dispatcher.BACKGROUND)//通过thread()指定执行线程
+  .delay(1000);//如果需要延迟执行，则设置延迟时间
+//注意不要调用execute();
+
+//创建第二个事件流
+ReqObservable<String> observable2 = CommonRequest.Create(new RequestBuilder<String>() {
+    {
+        url("https://baidu.com");
+    }
+}).subscribe(s -> {
+    Log.i("Coroutine", s);
+}).error(e -> {
+    Log.e("Coroutine", "error", e);
+}).method(Method.GET);//指定网络get请求
+
+// 将两个事件流通过ObservableSet.with方法组合起来，并调用execute()
+// 当两个事件流均成功执行完成，则会回调到ObservableSet 的subscribe中
+// 如果两个事件流中，有一个发生error，或者中断，则会取消set中所有的事件流执行
+ObservableSet.with(observable, observable2, observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
+    Log.i("Coroutine", aBoolean);
+}).error(Dispatcher.MAIN, error -> {
+    Log.e("Coroutine", "error", e);
+}).execute();
 ```
 
