@@ -161,6 +161,7 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
         }
         isIdle = job.delay > 0;
         boolean result = getThreadHandler().postAtTime(job, job.sysTime);
+        LLog.d(TAG, "job=" + job.hashCode() + "  task=" + job.runnable.hashCode() + "  result="+result);
         if (isIdle) {
             queueIdle();
         }
@@ -257,7 +258,6 @@ public class HandlerLRZThread extends Thread implements IHandlerThread, MessageQ
     public String toString() {
         return "{" +
                 "\"mTid\":" + mTid +
-                ", \"mHandler\":" + "\"" + mHandler + "\"" +
                 ", \"isRunning\":" + isRunning +
                 ", \"isIdle\":" + isIdle +
                 ", \"isCore\":" + isCore +

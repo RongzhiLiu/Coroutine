@@ -81,6 +81,7 @@ class LJob implements Runnable {
             if (dispatcher == null || iHandlerThread == null || cancel) {
                 return;
             }
+            LLog.d(TAG, "job cancel,job=" +hashCode() + " task=" + runnable.hashCode());
             ((CoroutineLRZScope) CoroutineLRZContext.INSTANCE).removeToFromQueue(this);
             cancel = true;
             isRunning = false;

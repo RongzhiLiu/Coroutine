@@ -11,10 +11,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Description: 多个事件流集合
  */
 public class ObservableSet extends Observable<Boolean> {
-    Observable<?>[] observables;
+    volatile Observable<?>[] observables;
     AtomicInteger count = new AtomicInteger();
 
-    private ObservableSet() {
+    ObservableSet() {
     }
 
     public static ObservableSet with(Observable<?>... observable) {
@@ -22,7 +22,7 @@ public class ObservableSet extends Observable<Boolean> {
         set.observables = observable;
         if (set.observables != null && set.observables.length > 0) {
             for (Observable<?> ob : set.observables) {
-                ob.map().subscribe((Observer) o -> set.checkResult());
+                ob.subscribe((Observer) o -> set.checkResult());
             }
         }
         return set;
@@ -36,52 +36,81 @@ public class ObservableSet extends Observable<Boolean> {
         }
     }
 
+    /**
+     * 复写父类，不处理线程回调，只接收多任务结束事件
+     *
+     * @param aBoolean
+     */
     @Override
-    public synchronized Observable<Boolean> execute() {
+    void onSubscribe(Boolean aBoolean) {
+        if (observables == null || count.get() >= observables.length) {
+            super.onSubscribe(aBoolean);
+        }
+    }
+
+    @Override
+    protected synchronized Task<?> getTask() {
+        Observable pre = preObservable;
+        if (pre != null) {
+            return pre.getTask();
+        } else if (task == null) {
+            task = new Task<Boolean>() {
+                @Override
+                public Boolean submit() {
+                    doObservables();
+                    return true;
+                }
+            };
+            task.setObservable(this);
+        }
+        return task;
+    }
+
+    /**
+     * 执行多个任务
+     */
+    private synchronized void doObservables() {
         if (observables != null && observables.length > 0) {
             for (Observable<?> ob : observables) {
                 proxyError(ob);
                 ob.execute();
             }
         }
-        return this;
     }
 
     @Override
-    public synchronized Observable<Boolean> execute(Dispatcher dispatcher) {
-        if (observables != null && observables.length > 0) {
-            for (Observable<?> ob : observables) {
-                proxyError(ob);
-                ob.execute(dispatcher);
-            }
+    public synchronized <F> Observable<F> map(Function<Boolean, F> function) {
+        return super.map(function);
+    }
+
+    /**
+     * 当前线程，立即执行所有任务
+     *
+     * @return
+     */
+    @Override
+    public synchronized Observable<Boolean> execute() {
+        Dispatcher dispatcher = getTaskDispatch();
+        if (dispatcher == null) {
+            dispatcher = Dispatcher.MAIN;
+        }
+        long delay = getDelay();
+        long interval;
+
+        Task<?> task = getTask();
+        if (delay > 0) {
+            job = CoroutineLRZContext.INSTANCE.executeDelay(dispatcher, task, delay);
+        } else if ((interval = getInterval()) > 0) {
+            job = CoroutineLRZContext.INSTANCE.executeTime(dispatcher, task, interval);
+        } else {
+            job = CoroutineLRZContext.INSTANCE.execute(dispatcher, task);
         }
         return this;
     }
 
-    @Override
-    public synchronized Observable<Boolean> executeDelay(Dispatcher dispatcher, long delay) {
-        if (observables != null && observables.length > 0) {
-            for (Observable<?> ob : observables) {
-                proxyError(ob);
-                ob.executeDelay(dispatcher, delay);
-            }
-        }
-        return this;
-    }
-
-    @Override
-    public synchronized Observable<Boolean> executeTime(Dispatcher dispatcher, long time) {
-        if (observables != null && observables.length > 0) {
-            for (Observable<?> ob : observables) {
-                proxyError(ob);
-                ob.executeTime(dispatcher, time);
-            }
-        }
-        return this;
-    }
 
     private void proxyError(Observable<?> ob) {
-        if (error != null) {
+        if (getError() != null) {
             IError<?> oldError = ob.getError();
             Dispatcher dispatcher = ob.getErrorDispatcher();
             if (dispatcher == null) dispatcher = ob.getDispatcher();

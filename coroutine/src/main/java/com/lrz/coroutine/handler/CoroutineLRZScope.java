@@ -28,7 +28,11 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     //正在运行的background线程数量
     private static volatile int backCount = 0;
     /**
-     * 核心线程数量保持为 cpu 个数，保证并发时的性能
+     * 是否开启额外调用栈，方便定位error
+     */
+    private boolean stackTraceExtraEnable = false;
+    /**
+     * 核心线程数量保持为 cpu 个数0.8，保证并发时的性能
      */
     private final int MAX_COUNT = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 2);
     /**
@@ -145,23 +149,28 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         if (job.sysTime == 0) {
             job.delayTime(0);
         }
-        /*
-         * 处理调用栈，增加自定义调用栈，方便问题定位
-         */
-        StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        StackTraceElement[] stackTrace = null;
-        int j = 0;
-        for (int i = 0; i < stackTraceElements.length; i++) {
-            StackTraceElement element = stackTraceElements[i];
-            if (stackTrace == null && element.getClassName().equals(CoroutineLRZScope.class.getName())) {
-                int length = Math.min(5, stackTraceElements.length - i - 1);
-                stackTrace = new StackTraceElement[length];
-            } else if (stackTrace != null && j < stackTrace.length) {
-                stackTrace[j] = element;
-                j += 1;
+        if (stackTraceExtraEnable) {
+            /*
+             * 处理调用栈，增加自定义调用栈，方便问题定位
+             */
+            StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
+            StackTraceElement[] stackTrace = null;
+            int j = 0;
+            for (int i = 0; i < stackTraceElements.length; i++) {
+                StackTraceElement element = stackTraceElements[i];
+                if (stackTrace == null && element.getClassName().equals(CoroutineLRZScope.class.getName())) {
+                    int length = Math.min(5, stackTraceElements.length - i - 1);
+                    stackTrace = new StackTraceElement[length];
+                } else if (stackTrace != null && j < stackTrace.length) {
+                    stackTrace[j] = element;
+                    j += 1;
+                }
+            }
+            job.setStackTraceExtra(stackTrace);
+            if (job.runnable instanceof Task) {
+                ((Task<?>) job.runnable).setStackTraceExtra(stackTrace);
             }
         }
-        job.setStackTraceExtra(stackTrace);
 
         if (job.getDispatcher() == Dispatcher.IO) {
             //先将任务丢到队列中排序
@@ -178,7 +187,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
         IHandlerThread handlerThread = getThreadHandler(job.getDispatcher());
         if (handlerThread != null) {
             if (!handlerThread.execute(job.handlerThread(handlerThread))) {
-                LLog.d(TAG, job.getDispatcher().name() + "there has no thread to execute your job ,please hold on");
+                LLog.d(TAG, job.getDispatcher().name() + "execute job failed ,add to queue already");
                 addToJobQueue(job.handlerThread(null));
             }
         } else {
@@ -246,8 +255,8 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
                 }
                 /*
                     如果是io线程，在创建新的非核心线程也需要谨慎处理
-                    我们在测试中发现，线程数量多，未必能提升并发量，且，在创建新的线程去处理新任务时，大多数情况下需要的时间比等待已存在的线程执行还要长
-                    甚至存在新的线程创建后，发现，任务已经被别的线程执行完了，新的线程没有做任何事情，白白等在死亡
+                    我在测试中发现，线程数量多，未必能提升并发量，且，在创建新的线程去处理新任务时，大多数情况下需要的时间比等待已存在的线程执行还要长
+                    存在新的线程创建后，发现，任务已经被别的线程执行完了，新的线程没有做任何事情，白白等在死亡
                     如果核心线程被使用完，但是并没有达到过载的状态，其实可以不用创建，而是等待被执行即可
                     如何界定io线程达到过载呢，这里暂时定为：任务队列积压的任务数量达到核心线程的2-3倍
 
@@ -395,5 +404,10 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     @Override
     public void execute(Runnable command) {
         execute(Dispatcher.IO, command);
+    }
+
+    @Override
+    public void setStackTraceExtraEnable(boolean stackTraceExtraEnable) {
+        this.stackTraceExtraEnable = stackTraceExtraEnable;
     }
 }

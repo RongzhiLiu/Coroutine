@@ -6,7 +6,8 @@ import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.coroutine.handler.Job;
 
 import java.io.Closeable;
-import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.util.Arrays;
 
 /**
  * Author:  liurongzhi
@@ -18,10 +19,10 @@ public class Observable<T> implements Closeable {
     protected Dispatcher dispatcher;
     // 执行者线程
     protected Dispatcher taskDispatcher;
-    protected Task<T> task;
+    protected volatile Task<T> task;
     protected Observer<T> result;
     protected Function<T, ?> map;
-    protected IError<Throwable> error;
+    private IError<Throwable> error;
     // 错误回调线程
     protected Dispatcher errorDispatcher;
     protected volatile Job job;
@@ -31,7 +32,6 @@ public class Observable<T> implements Closeable {
     protected long interval = -1;
     // 任务是否已经关闭
     private volatile boolean isCancel = false;
-
     /**
      * 双向链表结构，用于管理责任链中的 Observable，当使用map 函数时，会生成链表
      */
@@ -67,8 +67,7 @@ public class Observable<T> implements Closeable {
      * @return 任务描述
      */
     public synchronized Observable<T> subscribe(Observer<T> result) {
-        this.result = result;
-        return this;
+        return subscribe(dispatcher, result);
     }
 
     /**
@@ -79,9 +78,13 @@ public class Observable<T> implements Closeable {
      * @return 任务描述
      */
     public synchronized Observable<T> subscribe(Dispatcher dispatcher, Observer<T> result) {
-        this.dispatcher = dispatcher;
-        this.result = result;
-        return this;
+        if (this.result != null) {
+            return map().subscribe(dispatcher, result);
+        } else {
+            this.dispatcher = dispatcher;
+            this.result = result;
+            return this;
+        }
     }
 
     /**
@@ -93,9 +96,17 @@ public class Observable<T> implements Closeable {
      */
     public synchronized <F> Observable<F> map(Function<T, F> function) {
         this.map = function;
-        Observable<F> observableF = new Observable<>();
-        observableF.preObservable = this;
-        nextObservable = observableF;
+        Observable<F> observableF = null;
+        try {
+            Constructor<? extends Observable> constructor = this.getClass().getDeclaredConstructor();
+            constructor.setAccessible(true);
+            observableF = (Observable<F>) constructor.newInstance();
+            observableF = this.getClass().newInstance();
+            observableF.preObservable = this;
+            nextObservable = observableF;
+        } catch (Exception e) {
+            dispatchError(e);
+        }
         return observableF;
     }
 
@@ -104,7 +115,7 @@ public class Observable<T> implements Closeable {
      *
      * @return 可被订阅的Observable
      */
-    public synchronized Observable<T> map() {
+    protected synchronized Observable<T> map() {
         return map(null);
     }
 
@@ -343,6 +354,17 @@ public class Observable<T> implements Closeable {
     protected void onError(Throwable e) {
         if (isCancel) return;
         IError error = this.error;
+        Task task = getTask();
+        if (task != null) {
+            StackTraceElement[] stackTraceExtra = task.getStackTraceExtra();
+            if (stackTraceExtra != null) {
+                StackTraceElement[] stackTraceElements = e.getStackTrace();
+                int oldLength = stackTraceElements.length;
+                stackTraceElements = Arrays.copyOf(stackTraceElements, stackTraceElements.length + stackTraceExtra.length);
+                System.arraycopy(stackTraceExtra, 0, stackTraceElements, oldLength, stackTraceExtra.length);
+                e.setStackTrace(stackTraceElements);
+            }
+        }
         if (error != null) {
             Dispatcher dispatcher = getErrorDispatcher();
             // 向链表上游获取就近的观察者线程
@@ -456,4 +478,6 @@ public class Observable<T> implements Closeable {
     public void close() {
         cancel();
     }
+
+
 }

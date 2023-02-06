@@ -44,7 +44,7 @@ public interface CoroutineLRZContext extends Executor {
         INSTANCE.setKeepTime(time);
     }
 
-    static void SetElasticCount(int count){
+    static void SetElasticCount(int count) {
         INSTANCE.setElasticCount(count);
     }
 
@@ -113,8 +113,16 @@ public interface CoroutineLRZContext extends Executor {
     /**
      * 设置非核心线程最大数量，非核心线程在空闲KeepTime后将结束
      * 一般用于突发性的并发任务，移动平台该数量不应设置过大
+     *
      * @param count 非核心线程最大数量
      */
     void setElasticCount(int count);
+
+    /**
+     * 设置是否开启额外调用堆栈
+     * @param enable
+     */
+    void setStackTraceExtraEnable(boolean enable);
+
 
 }

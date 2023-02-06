@@ -26,7 +26,7 @@ public class ReqObservable<T> extends Observable<T> {
     }
 
     public synchronized ReqObservable<T> error(ReqError error) {
-        return error(Dispatcher.MAIN,error);
+        return error(Dispatcher.MAIN, error);
     }
 
     public synchronized ReqObservable<T> error(Dispatcher dispatcher, ReqError error) {
@@ -44,15 +44,11 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized ReqObservable<T> subscribe(Observer<T> result) {
-        super.subscribe(result);
-        dispatcher = Dispatcher.MAIN;
-        return this;
+        return subscribe(Dispatcher.MAIN, result);
     }
 
     public synchronized ReqObservable<T> subscribe(Dispatcher dispatcher, Observer<T> result) {
-        this.dispatcher = dispatcher;
-        this.result = result;
-        return this;
+        return (ReqObservable<T>) super.subscribe(dispatcher, result);
     }
 
     /**
@@ -91,7 +87,7 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized Observable<T> execute(Dispatcher dispatcher) {
-        if (error == null) {
+        if (getError() == null) {
             error(new DefReqError());
         }
         return super.execute(dispatcher);
@@ -102,7 +98,7 @@ public class ReqObservable<T> extends Observable<T> {
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
-        if (error == null) {
+        if (getError() == null) {
             error(new DefReqError());
         }
         return super.execute();
@@ -125,14 +121,6 @@ public class ReqObservable<T> extends Observable<T> {
                 }
             }
         }
-    }
-
-    @Override
-    public synchronized ReqObservable<T> map() {
-        ReqObservable<T> observable = new ReqObservable<>();
-        observable.preObservable = this;
-        nextObservable = observable;
-        return observable;
     }
 
     @Override
