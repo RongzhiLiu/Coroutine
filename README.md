@@ -9,7 +9,7 @@
 maven { url 'https://jitpack.io' }
 ```
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.1.1'
+implementation 'com.github.RongzhiLiu:Coroutine:1.1.2'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'
@@ -44,8 +44,9 @@ implementation 'com.google.code.gson:gson:2.8.5'
 #### 三.异步的简单使用:
 
 ```java
-//日志开关,正式环境可将其设置为ERROR，调试时设置为INFO或DEBUG
+//日志开关,正式环境可将其设置为ERROR，调试时设置为INFO或DEBUG，（INFO级别的日志，会输出任务执行耗时，线上环境请设置为ERROR）
 LLog.logLevel = LLog.INFO;//LLog.DEBUG,LLog.WARN,LLog.ERROR
+        
 // 发起异步任务
 Job job = CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
             @Override
@@ -145,6 +146,12 @@ IO类型的线程和BACKGROUND线程会相互窃取对方的任务执行，以�
      * @param count 非核心线程最大数量，默认非核心线程数量是核心线程数的一半
      */
     void setElasticCount(int count);
+
+    /**
+     * 设置是否开启额外调用堆栈,开启后，若异步线程发生异常，可查看任务发起时的堆栈（线上环境请关闭此开关）
+     * @param enable
+     */
+     void setStackTraceExtraEnable(boolean enable);
 ```
 
 #### 四.高级用法一
