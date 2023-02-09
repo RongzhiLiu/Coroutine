@@ -56,6 +56,7 @@ public class ReqObservable<T> extends Observable<T> {
      *
      * @return Request
      */
+    @Override
     public final synchronized ReqObservable<T> GET() {
         ((RequestBuilder<?>) getTask()).method(0);
         // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
@@ -71,6 +72,7 @@ public class ReqObservable<T> extends Observable<T> {
      *
      * @return Request
      */
+    @Override
     public final synchronized ReqObservable<T> POST() {
         ((RequestBuilder<?>) getTask()).method(1);
         if (taskDispatcher == null) {

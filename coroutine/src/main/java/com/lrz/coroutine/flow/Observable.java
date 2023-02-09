@@ -6,7 +6,6 @@ import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.coroutine.handler.Job;
 
 import java.io.Closeable;
-import java.lang.reflect.Constructor;
 import java.util.Arrays;
 
 /**
@@ -98,9 +97,6 @@ public class Observable<T> implements Closeable {
         this.map = function;
         Observable<F> observableF = null;
         try {
-            Constructor<? extends Observable> constructor = this.getClass().getDeclaredConstructor();
-            constructor.setAccessible(true);
-            observableF = (Observable<F>) constructor.newInstance();
             observableF = this.getClass().newInstance();
             observableF.preObservable = this;
             nextObservable = observableF;
@@ -260,7 +256,10 @@ public class Observable<T> implements Closeable {
      * 在当前线程执行，该线程可能是thread()设置的，如果是null，则不执行
      */
     public synchronized Observable<T> execute() {
-        Task<?> task = getTask();
+        if (task == null && preObservable != null) {
+            preObservable.execute();
+            return this;
+        }
         if (task == null) return this;
         Dispatcher dispatcher = getTaskDispatch();
         if (dispatcher == null) return this;
@@ -282,11 +281,10 @@ public class Observable<T> implements Closeable {
      * @param dispatcher 线程
      */
     public synchronized Observable<T> execute(Dispatcher dispatcher) {
-        Task<?> task = getTask();
-        Observable<?> observable = this;
-        while (observable != null) {
-            observable.taskDispatcher = dispatcher;
-            observable = observable.preObservable;
+        thread(dispatcher);
+        if (task == null && preObservable != null) {
+            preObservable.execute(dispatcher);
+            return this;
         }
         if (task != null) {
             job = CoroutineLRZContext.INSTANCE.execute(dispatcher, task);
@@ -301,11 +299,12 @@ public class Observable<T> implements Closeable {
      * @param delay      延迟时间
      */
     public synchronized Observable<T> executeDelay(Dispatcher dispatcher, long delay) {
-        Task<?> task = getTask();
-        Observable<?> observable = this;
-        while (observable != null) {
-            observable.taskDispatcher = dispatcher;
-            observable = observable.preObservable;
+        thread(dispatcher);
+        delay(delay);
+
+        if (task == null && preObservable != null) {
+            preObservable.executeDelay(dispatcher,delay);
+            return this;
         }
         if (task != null)
             job = CoroutineLRZContext.INSTANCE.executeDelay(dispatcher, task, delay);
@@ -319,12 +318,14 @@ public class Observable<T> implements Closeable {
      * @param interval   循环间隔
      */
     public synchronized Observable<T> executeTime(Dispatcher dispatcher, long interval) {
-        Task<?> task = getTask();
-        Observable<?> observable = this;
-        while (observable != null) {
-            observable.taskDispatcher = dispatcher;
-            observable = observable.preObservable;
+        thread(dispatcher);
+        interval(delay);
+
+        if (task == null && preObservable != null) {
+            preObservable.executeTime(dispatcher,interval);
+            return this;
         }
+
         if (task != null)
             job = CoroutineLRZContext.INSTANCE.executeTime(dispatcher, task, interval);
         return this;
@@ -343,7 +344,7 @@ public class Observable<T> implements Closeable {
         return task;
     }
 
-    protected synchronized IError<?> getError() {
+    protected synchronized IError<Throwable> getError() {
         Observable pre = preObservable;
         if (pre != null) {
             return pre.getError();
@@ -480,4 +481,12 @@ public class Observable<T> implements Closeable {
     }
 
 
+
+    protected synchronized Observable<T> GET() {
+        return this;
+    }
+
+    protected synchronized Observable<T> POST() {
+        return this;
+    }
 }

@@ -110,39 +110,40 @@ public class FirstFragment extends Fragment {
             Log.i("---任务1-def-subscribe", Thread.currentThread().getName());
         }).error(error -> {
             Log.i("---任务1-error", Thread.currentThread().getName(), error);
-        }).thread(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+        }).thread(Dispatcher.BACKGROUND).execute();//开始执行任务，并指定线程
 
 
-//        Observable<String> observable2 = CoroutineLRZContext.Create(new Task<String>() {
-//            @Override
-//            public String submit() {
-//                Log.i("---任务2", Thread.currentThread().getName());
-//                return "";
-//            }
-//        }).subscribe(Dispatcher.IO, str -> {
-//            Log.i("---任务2-io-subscribe", Thread.currentThread().getName());
-//        }).subscribe(Dispatcher.BACKGROUND, bean -> { //第二个订阅者
-//            Log.i("---任务2-BACK-subscribe", Thread.currentThread().getName());
-//        }).thread(Dispatcher.MAIN);//开始执行任务，并指定线程
+        Observable<String> observable2 = CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                Log.i("---任务2", Thread.currentThread().getName());
+                return "";
+            }
+        }).subscribe(Dispatcher.IO, str -> {
+            Log.i("---任务2-io-subscribe", Thread.currentThread().getName());
+        }).subscribe(Dispatcher.BACKGROUND, bean -> { //第二个订阅者
+            Log.i("---任务2-BACK-subscribe", Thread.currentThread().getName());
+        }).thread(Dispatcher.MAIN).execute();//开始执行任务，并指定线程
 
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
             {
-                url("https://baidu.com");
+                url("https://www.baidu.com");
             }
         }).subscribe(s -> {
-            Log.i("---任务request-subscribe", Thread.currentThread().getName());
+            Log.i("---任务request-sub", Thread.currentThread().getName());
+        }).subscribe(Dispatcher.IO, s -> {
+            Log.i("---任务request-subIO", Thread.currentThread().getName());
         }).error(error -> Log.i("---任务request-error", Thread.currentThread().getName())).subscribe(Dispatcher.IO, s -> {
             Log.i("---任务request-subscribe2", Thread.currentThread().getName());
-        }).method(Method.GET);
-//
-//
-        ObservableSet.with(observable, observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
-            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
-        }).error(Dispatcher.MAIN, error -> {
-            Log.i("---set-error", Thread.currentThread().getName(), error);
-        }).subscribe(Dispatcher.IO, aBoolean -> {
-            Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
-        }).execute();
+        }).GET();
+
+//        ObservableSet.with(observable, observable2,observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
+//            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+//        }).error(Dispatcher.MAIN, error -> {
+//            Log.i("---set-error", Thread.currentThread().getName(), error);
+//        }).subscribe(Dispatcher.IO, aBoolean -> {
+//            Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
+//        }).execute();
 
 
     }
