@@ -11,15 +11,30 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Description: 多个事件流集合
  */
 public class ObservableSet extends Observable<Boolean> {
-    volatile Observable<?>[] observables;
+    Observable<?>[] observables;
     AtomicInteger count = new AtomicInteger();
+    boolean closeOnError = false;
 
-    ObservableSet() {
+    protected ObservableSet() {
+    }
+
+    ObservableSet(Observable<?>[] observables) {
+        this.observables = observables;
     }
 
     public static ObservableSet with(Observable<?>... observable) {
-        ObservableSet set = new ObservableSet();
-        set.observables = observable;
+        ObservableSet set = new ObservableSet(observable);
+        if (set.observables != null && set.observables.length > 0) {
+            for (Observable<?> ob : set.observables) {
+                ob.subscribe((Observer) o -> set.checkResult());
+            }
+        }
+        return set;
+    }
+
+    public static ObservableSet with(boolean closeOnError, Observable<?>... observable) {
+        ObservableSet set = new ObservableSet(observable);
+        set.closeOnError = closeOnError;
         if (set.observables != null && set.observables.length > 0) {
             for (Observable<?> ob : set.observables) {
                 ob.subscribe((Observer) o -> set.checkResult());
@@ -133,20 +148,27 @@ public class ObservableSet extends Observable<Boolean> {
         @Override
         public void onError(Throwable throwable) {
             IError error = this.error;
-            if (error != null) {
-                error.onError(throwable);
-            }
             if (observableSet.getErrorDispatcher() == null) {
                 observableSet.errorDispatcher = observableSet.dispatcher;
             }
-            observableSet.onError(throwable);
+            if (error != null) {
+                if (oldDispatch != null) {
+                    CoroutineLRZContext.INSTANCE.execute(oldDispatch, () -> {
+                        error.onError(throwable);
+                        observableSet.onError(throwable);
+                    });
+                } else {
+                    error.onError(throwable);
+                    observableSet.onError(throwable);
+                }
+            }
         }
     }
 
     @Override
     protected void onError(Throwable e) {
         super.onError(e);
-        cancel();
+        if (closeOnError) cancel();
     }
 
     @Override

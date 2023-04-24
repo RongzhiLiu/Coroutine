@@ -44,13 +44,30 @@ public class CommonRequest {
         CommonRequest.msgStr = msgStr;
     }
 
+    /**
+     * 使用默认实例创建任务
+     *
+     * @param task 任务
+     * @param <T>  范型
+     * @return 返回任务观察者
+     */
     public static <T> ReqObservable<T> Create(RequestBuilder<T> task) {
+        return request.create(task);
+    }
+
+    /**
+     * 创建任务
+     *
+     * @param task 任务
+     * @param <T>  范型
+     * @return 返回任务观察者
+     */
+    public <T> ReqObservable<T> create(RequestBuilder<T> task) {
         ReqObservable<T> observable;
         observable = new ReqObservable<>(task);
         task.setObservable(observable);
         return observable;
     }
-
 
     public static final CommonRequest request = new CommonRequest(HttpClient.instance.getClient());
     private final OkHttpClient client;
@@ -161,7 +178,7 @@ public class CommonRequest {
         }
         ResponseBody body = response.body();
         if (body != null) {
-            if (response.code() == 200) {
+            if (response.code() == 200 || response.code() == 201) {
                 final String json;
                 try {
                     json = body.string();
@@ -178,7 +195,7 @@ public class CommonRequest {
                             throw new RequestException(msg, code);
                         }
                     } catch (JSONException e) {
-                        throw new RequestException("code or msg decode error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_JSON_FORMAT);
+                        throw new RequestException("code or msg in json decode error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_JSON_FORMAT);
                     }
                 }
                 if (dClass == String.class || dClass == null) {
@@ -192,7 +209,7 @@ public class CommonRequest {
                 }
             } else {
                 body.close();
-                throw new RequestException("Request Error, please check the error code!", response.code());
+                throw new RequestException("Request Error, the http code = " + response.code(), response.code());
             }
         } else {
             throw new RequestException("No data requested!", ResponseCode.CODE_ERROR_RESPONSE_NULL);
@@ -203,7 +220,6 @@ public class CommonRequest {
         if (url == null || url.length() < 1) {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
-        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
@@ -228,6 +244,6 @@ public class CommonRequest {
                 }
             }
         }
-        return execute(mOkHttp, builder, dClass, tag);
+        return execute(client, builder, dClass, tag);
     }
 }

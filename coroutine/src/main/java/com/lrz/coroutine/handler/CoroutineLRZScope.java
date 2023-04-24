@@ -47,12 +47,12 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
      * 工作队列已满，放到此容器中暂存
      */
     private final PriorityBlockingQueue<LJob> jobQueue = new PriorityBlockingQueue<>(MAX_COUNT, (o1, o2) -> {
-        int x1 = Priority.MEDIUM.ordinal(), x2 = Priority.MEDIUM.ordinal();
+        int x1 = Priority.MEDIUM.value, x2 = Priority.MEDIUM.value;
         if (o1.runnable instanceof PriorityRunnable) {
-            x1 = ((PriorityRunnable) o1.runnable).getPriority().ordinal();
+            x1 = ((PriorityRunnable) o1.runnable).getPriority().value;
         }
         if (o2.runnable instanceof PriorityRunnable) {
-            x2 = ((PriorityRunnable) o2.runnable).getPriority().ordinal();
+            x2 = ((PriorityRunnable) o2.runnable).getPriority().value;
         }
         if (x1 == x2) return (o1.sysTime > o2.sysTime ? 1 : -1);
         return x2 - x1;

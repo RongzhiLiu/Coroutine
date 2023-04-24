@@ -32,7 +32,7 @@ public abstract class Task<T> extends PriorityRunnable {
     @Override
     public void run() {
         Observable<T> observable = this.observable;
-        if (observable == null) return;
+        if (observable == null || observable.isCancel()) return;
         try {
             T t = submit();
             observable.onSubscribe(t);

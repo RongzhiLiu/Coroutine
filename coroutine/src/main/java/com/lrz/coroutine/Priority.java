@@ -1,29 +1,35 @@
 package com.lrz.coroutine;
 
-public enum Priority {
-    /**
-     * NOTE: DO NOT CHANGE ORDERING OF THOSE CONSTANTS UNDER ANY CIRCUMSTANCES.
-     * Doing so will make ordering incorrect.
-     */
+public class Priority implements Comparable<Priority> {
+    public final int value;
+
+    public Priority(int value) {
+        this.value = value;
+    }
 
     /**
      * Lowest priority level. Used for prefetches of data.
      */
-    LOW,
+    public static final Priority LOW = new Priority(0);
 
     /**
      * Medium priority level. Used for warming of data that might soon get visible.
      */
-    MEDIUM,
+    public static final Priority MEDIUM = new Priority(1);
 
     /**
      * Highest priority level. Used for data that are currently visible on screen.
      */
-    HIGH,
+    public static final Priority HIGH = new Priority(2);
 
     /**
      * Highest priority level. Used for data that are required instantly(mainly for emergency).
      */
-    IMMEDIATE;
+    public static final Priority IMMEDIATE = new Priority(3);
 
+    @Override
+    public int compareTo(Priority o) {
+        if (o == null) return -1;
+        return this.value - o.value;
+    }
 }

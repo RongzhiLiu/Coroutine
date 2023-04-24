@@ -1,5 +1,6 @@
 package com.lrz.sample;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.google.android.material.snackbar.Snackbar;
@@ -18,11 +19,18 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
+import com.lrz.coroutine.flow.net.CommonRequest;
+import com.lrz.coroutine.flow.net.HttpClient;
+import com.lrz.coroutine.handler.CoroutineLRZContext;
 import com.lrz.sample.databinding.ActivityMainBinding;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
+
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -32,21 +40,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        Looper.getMainLooper().setMessageLogging(new Printer() {
-//            private long time;
-//            private String log;
-//            @Override
-//            public void println(String x) {
-//                if (time == 0) {
-//                    log = x;
-//                    time = SystemClock.uptimeMillis();
-//                } else {
-//                    LLog.i("MAIN", "total time=" + (SystemClock.uptimeMillis() - time) + log);
-//                    time = 0;
-//                    log = null;
-//                }
-//            }
-//        });
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -92,5 +85,22 @@ public class MainActivity extends AppCompatActivity {
         NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment_content_main);
         return NavigationUI.navigateUp(navController, appBarConfiguration)
                 || super.onSupportNavigateUp();
+    }
+
+    public void testPng(){
+        CoroutineLRZContext.Execute(Dispatcher.IO, new Runnable() {
+            @Override
+            public void run() {
+                HashMap<String, String> head = new HashMap<>();
+                head.put("Authorization", "Basic YXBpOkNHVzZIUjF5aFBza3BjQjV2Nk1EVzVOQ3NyMlpiTXZ3");
+                head.put("Content-Type", "application/json");
+                try {
+                    CommonRequest.request.postJson("https://api.tinify.com/shrink", new HashMap<>(), "{\"source\": {\"url\": \"https://tinypng.com/images/panda-happy.png\"} }", String.class, head, 0);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 }

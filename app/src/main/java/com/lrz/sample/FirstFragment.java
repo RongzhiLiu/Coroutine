@@ -1,14 +1,10 @@
 package com.lrz.sample;
 
 import android.os.Bundle;
-import android.os.Debug;
-import android.os.Handler;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -16,21 +12,19 @@ import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.Priority;
-import com.lrz.coroutine.flow.Function;
-import com.lrz.coroutine.flow.IError;
+import com.lrz.coroutine.flow.Emitter;
 import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.ObservableSet;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 import com.lrz.coroutine.flow.net.CommonRequest;
 import com.lrz.coroutine.flow.net.Method;
-import com.lrz.coroutine.flow.net.ReqError;
 import com.lrz.coroutine.flow.net.ReqObservable;
 import com.lrz.coroutine.flow.net.RequestBuilder;
-import com.lrz.coroutine.flow.net.RequestException;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
-import com.lrz.coroutine.handler.Job;
 import com.lrz.sample.databinding.FragmentFirstBinding;
+
+import java.util.concurrent.PriorityBlockingQueue;
 
 public class FirstFragment extends Fragment {
 
@@ -75,10 +69,16 @@ public class FirstFragment extends Fragment {
             }
         });
 
+        CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                System.out.println("submit--------thread=" + Thread.currentThread().getName());
+                return "null";
+            }
+        }).execute(Dispatcher.MAIN);
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Debug.startMethodTracing();
                 streamSet();
             }
         });
@@ -86,15 +86,28 @@ public class FirstFragment extends Fragment {
         binding.buttonBackground.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                System.out.println("-------start " + SystemClock.uptimeMillis());
-                CoroutineLRZContext.ExecuteTime(Dispatcher.MAIN, new Runnable() {
-                    @Override
-                    public void run() {
-                        System.out.println("-------ExecuteTime ");
-                    }
-                }, 1000);
+                emit();
             }
         });
+    }
+
+    private void emit() {
+        Emitter<String> emitter = new Emitter<String>() {
+        };
+        Observable<String> observable = CoroutineLRZContext.Create(emitter).subscribe(str -> {
+            Log.i("---任务1-io-subscribe", Thread.currentThread().getName());
+        }).subscribe(bean -> { //第二个订阅者
+            Log.i("---任务1-def-subscribe", Thread.currentThread().getName());
+        }).error(error -> {
+            Log.i("---任务1-error", Thread.currentThread().getName());
+        }).execute();//开始执行任务，并指定线程
+        new Thread() {
+            @Override
+            public void run() {
+                super.run();
+                emitter.next("1");
+            }
+        }.start();
     }
 
     private void streamSet() {
@@ -109,9 +122,8 @@ public class FirstFragment extends Fragment {
         }).subscribe(bean -> { //第二个订阅者
             Log.i("---任务1-def-subscribe", Thread.currentThread().getName());
         }).error(error -> {
-            Log.i("---任务1-error", Thread.currentThread().getName(), error);
-        }).thread(Dispatcher.BACKGROUND).execute();//开始执行任务，并指定线程
-
+            Log.i("---任务1-error", Thread.currentThread().getName());
+        }).thread(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
 
         Observable<String> observable2 = CoroutineLRZContext.Create(new Task<String>() {
             @Override
@@ -123,7 +135,7 @@ public class FirstFragment extends Fragment {
             Log.i("---任务2-io-subscribe", Thread.currentThread().getName());
         }).subscribe(Dispatcher.BACKGROUND, bean -> { //第二个订阅者
             Log.i("---任务2-BACK-subscribe", Thread.currentThread().getName());
-        }).thread(Dispatcher.MAIN).execute();//开始执行任务，并指定线程
+        }).thread(Dispatcher.MAIN);//开始执行任务，并指定线程
 
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
             {
@@ -135,15 +147,15 @@ public class FirstFragment extends Fragment {
             Log.i("---任务request-subIO", Thread.currentThread().getName());
         }).error(error -> Log.i("---任务request-error", Thread.currentThread().getName())).subscribe(Dispatcher.IO, s -> {
             Log.i("---任务request-subscribe2", Thread.currentThread().getName());
-        }).GET();
+        }).method(Method.GET);
 
-//        ObservableSet.with(observable, observable2,observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
-//            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
-//        }).error(Dispatcher.MAIN, error -> {
-//            Log.i("---set-error", Thread.currentThread().getName(), error);
-//        }).subscribe(Dispatcher.IO, aBoolean -> {
-//            Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
-//        }).execute();
+        ObservableSet.with(true, observable, observable2, observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
+            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+        }).error(Dispatcher.MAIN, error -> {
+            Log.i("---set-error", Thread.currentThread().getName());
+        }).subscribe(Dispatcher.IO, aBoolean -> {
+            Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
+        }).execute();
 
 
     }
@@ -154,51 +166,17 @@ public class FirstFragment extends Fragment {
         binding = null;
     }
 
-
     public void steam() {
-        Job job = CoroutineLRZContext.ExecuteTime(Dispatcher.BACKGROUND, () -> {
-
-        }, 1000);
-        job.cancel();
-
-        Observable<?> observable = CoroutineLRZContext.Create(new Task<String>(Priority.IMMEDIATE) {
-            @Override
-            public String submit() {
-                return "result";
-            }
-        }).thread(Dispatcher.BACKGROUND).subscribe(Dispatcher.MAIN, s -> {
-            // update ui
-        }).subscribe(Dispatcher.IO, s -> {
-            // save file
-        }).map(s -> Integer.parseInt(s)).subscribe(Dispatcher.IO, integer -> {
-
+        Observable<String> observable1 = CoroutineLRZContext.Create(new Emitter<String>() {
+        }).subscribe(Dispatcher.MAIN, s -> {
+            // 展示dialog1
         });
-        observable.cancel();
 
-        Observable<?> observable2 = CoroutineLRZContext.Create(new Task<String>() {
-            @Override
-            public String submit() {
-                return null;
-            }
-        }).subscribe(s -> {
+        Observable<Integer> observable2 = CoroutineLRZContext.Create(new Emitter<Integer>() {
+        }).subscribe(Dispatcher.MAIN, i -> {
+            // 展示dialog2
+        });
 
-        }).thread(Dispatcher.IO);
-
-        ObservableSet.with(observable, observable2).subscribe(Dispatcher.MAIN, aBoolean -> {
-
-        }).subscribe(Dispatcher.IO, aBoolean -> {
-
-        }).execute();
-
-
-        ReqObservable reqObservable = CommonRequest.Create(new RequestBuilder<String>("") {
-            {
-                url("");
-                addHeader("", "");
-                addParam("", "");
-                json("");
-            }
-        }).POST();
-        reqObservable.cancel();
+        ObservableSet.with(observable1, observable2);
     }
 }

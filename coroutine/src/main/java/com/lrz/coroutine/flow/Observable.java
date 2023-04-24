@@ -256,6 +256,9 @@ public class Observable<T> implements Closeable {
      * 在当前线程执行，该线程可能是thread()设置的，如果是null，则不执行
      */
     public synchronized Observable<T> execute() {
+        //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        if (task instanceof Emitter) return this;
+
         if (task == null && preObservable != null) {
             preObservable.execute();
             return this;
@@ -282,6 +285,8 @@ public class Observable<T> implements Closeable {
      */
     public synchronized Observable<T> execute(Dispatcher dispatcher) {
         thread(dispatcher);
+        //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        if (task instanceof Emitter) return this;
         if (task == null && preObservable != null) {
             preObservable.execute(dispatcher);
             return this;
@@ -301,9 +306,10 @@ public class Observable<T> implements Closeable {
     public synchronized Observable<T> executeDelay(Dispatcher dispatcher, long delay) {
         thread(dispatcher);
         delay(delay);
-
+        //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        if (task instanceof Emitter) return this;
         if (task == null && preObservable != null) {
-            preObservable.executeDelay(dispatcher,delay);
+            preObservable.executeDelay(dispatcher, delay);
             return this;
         }
         if (task != null)
@@ -320,9 +326,10 @@ public class Observable<T> implements Closeable {
     public synchronized Observable<T> executeTime(Dispatcher dispatcher, long interval) {
         thread(dispatcher);
         interval(delay);
-
+        //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        if (task instanceof Emitter) return this;
         if (task == null && preObservable != null) {
-            preObservable.executeTime(dispatcher,interval);
+            preObservable.executeTime(dispatcher, interval);
             return this;
         }
 
@@ -480,7 +487,9 @@ public class Observable<T> implements Closeable {
         cancel();
     }
 
-
+    public synchronized boolean isCancel() {
+        return isCancel;
+    }
 
     protected synchronized Observable<T> GET() {
         return this;
