@@ -9,7 +9,7 @@ import com.lrz.coroutine.Dispatcher;
  * Author And Date: liurongzhi on 2020/3/1.
  * Description: com.yilan.sdk.common.executor
  */
-class MainHandlerThread implements IHandlerThread {
+public class MainHandlerThread implements IHandlerThread {
     private volatile Handler mHandler;
 
     public MainHandlerThread() {
