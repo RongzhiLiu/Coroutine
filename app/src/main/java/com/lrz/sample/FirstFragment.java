@@ -92,22 +92,18 @@ public class FirstFragment extends Fragment {
     }
 
     private void emit() {
-        Emitter<String> emitter = new Emitter<String>() {
-        };
-        Observable<String> observable = CoroutineLRZContext.Create(emitter).subscribe(str -> {
-            Log.i("---任务1-io-subscribe", Thread.currentThread().getName());
-        }).subscribe(bean -> { //第二个订阅者
-            Log.i("---任务1-def-subscribe", Thread.currentThread().getName());
-        }).error(error -> {
-            Log.i("---任务1-error", Thread.currentThread().getName());
-        }).execute();//开始执行任务，并指定线程
-        new Thread() {
-            @Override
-            public void run() {
-                super.run();
-                emitter.next("1");
+        ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
+            {
+                url("https://www.baidu.com");
             }
-        }.start();
+        }).subscribe(Dispatcher.IO, s -> {
+            Log.i("---任务request-subIO", Thread.currentThread().getName());
+        }).error(error -> Log.i("---任务request-error", Thread.currentThread().getName())).subscribe(Dispatcher.IO, s -> {
+            Log.i("---任务request-subscribe2", Thread.currentThread().getName());
+        }).GET().subscribe(s -> {
+            Log.i("---任务request-sub", Thread.currentThread().getName());
+        });
+
     }
 
     private void streamSet() {

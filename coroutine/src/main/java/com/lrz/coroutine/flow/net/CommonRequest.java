@@ -2,8 +2,10 @@ package com.lrz.coroutine.flow.net;
 
 import android.os.Looper;
 import android.text.TextUtils;
+import android.util.SparseArray;
 
 import com.google.gson.Gson;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -26,22 +28,34 @@ import okhttp3.ResponseBody;
 public class CommonRequest {
     //预解析字段，可将 自定义的code归类到错误中
     // code的值不等于200，则表示服务获取失败
-    private static String codeStr;
-    private static String msgStr;
+    private String codeStr;
+    private String msgStr;
     private static final Gson GSON = new Gson();
+    SparseArray<CodeInterceptor> codeInterceptors = new SparseArray<>();
 
     /**
      * 设置设置预解析的code字段
      */
     public static void setCodeStr(String codeStr) {
-        CommonRequest.codeStr = codeStr;
+        CommonRequest.request.codeStr = codeStr;
     }
 
     /**
      * 设置设置预解析的message字段
      */
     public static void setMsgStr(String msgStr) {
-        CommonRequest.msgStr = msgStr;
+        CommonRequest.request.msgStr = msgStr;
+    }
+
+    /**
+     * 注册异常code拦截器
+     */
+    public static void RegisterCodeInterceptor(int code, CodeInterceptor interceptor) {
+        CommonRequest.request.codeInterceptors.put(code, interceptor);
+    }
+
+    public void registerCodeInterceptor(int code, CodeInterceptor interceptor) {
+        codeInterceptors.put(code, interceptor);
     }
 
     /**
@@ -190,8 +204,12 @@ public class CommonRequest {
                     try {
                         JSONObject jo = new JSONObject(json);
                         int code = jo.getInt(codeStr);
-                        if (code != 200) {
+                        if (code != 0) {
                             String msg = jo.getString(msgStr);
+                            CodeInterceptor interceptor = codeInterceptors.get(code);
+                            if (interceptor != null) {
+                                interceptor.onInterceptor(json, msg);
+                            }
                             throw new RequestException(msg, code);
                         }
                     } catch (JSONException e) {
