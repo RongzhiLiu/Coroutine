@@ -94,11 +94,13 @@ public class FirstFragment extends Fragment {
     private void emit() {
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
             {
-                url("https://www.baidu.com");
+                url("https://baidu.com");
             }
         }).subscribe(Dispatcher.IO, s -> {
             Log.i("---任务request-subIO", Thread.currentThread().getName());
-        }).error(error -> Log.i("---任务request-error", Thread.currentThread().getName())).subscribe(Dispatcher.IO, s -> {
+        }).error(error -> {
+            Log.e("---任务request-error", Thread.currentThread().getName(),error);
+        }).subscribe(Dispatcher.IO, s -> {
             Log.i("---任务request-subscribe2", Thread.currentThread().getName());
         }).GET().subscribe(s -> {
             Log.i("---任务request-sub", Thread.currentThread().getName());
@@ -132,7 +134,6 @@ public class FirstFragment extends Fragment {
         }).subscribe(Dispatcher.BACKGROUND, bean -> { //第二个订阅者
             Log.i("---任务2-BACK-subscribe", Thread.currentThread().getName());
         }).thread(Dispatcher.MAIN);//开始执行任务，并指定线程
-
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
             {
                 url("https://www.baidu.com");

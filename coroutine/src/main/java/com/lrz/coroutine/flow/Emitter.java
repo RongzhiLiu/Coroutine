@@ -4,7 +4,7 @@ package com.lrz.coroutine.flow;
  * Author:  liurongzhi
  * CreateTime:  2023/3/6
  * Description: 发射器
- * 发射器不是由线程主动执行，而是由外部调用，发射时间，事件类型由范性来控制
+ * 发射器不是由线程主动执行，而是由外部调用，发射事件，事件类型由范性来控制
  */
 public abstract class Emitter<T> extends Task<T> {
     @Override

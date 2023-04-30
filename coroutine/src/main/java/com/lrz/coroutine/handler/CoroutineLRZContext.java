@@ -48,6 +48,14 @@ public interface CoroutineLRZContext extends Executor {
         INSTANCE.setElasticCount(count);
     }
 
+    static void SetStackTraceExtraEnable(boolean enable) {
+        INSTANCE.setStackTraceExtraEnable(enable);
+    }
+
+    static boolean GetStackTraceExtraEnable() {
+        return INSTANCE.getStackTraceExtraEnable();
+    }
+
     /**
      * 启动异步任务
      *
@@ -125,5 +133,10 @@ public interface CoroutineLRZContext extends Executor {
      */
     void setStackTraceExtraEnable(boolean enable);
 
-
+    /**
+     * 是否开启额外调用堆栈
+     *
+     * @return boolean
+     */
+    boolean getStackTraceExtraEnable();
 }

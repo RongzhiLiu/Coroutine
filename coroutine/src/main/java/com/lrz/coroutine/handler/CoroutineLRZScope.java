@@ -156,11 +156,20 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
             StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
             StackTraceElement[] stackTrace = null;
             int j = 0;
+            boolean isAppStack = false;//是否已经进入到app的方法栈中
+            String packageName = LLog.class.getName().replace(LLog.class.getSimpleName(), "");
             for (int i = 0; i < stackTraceElements.length; i++) {
                 StackTraceElement element = stackTraceElements[i];
-                if (stackTrace == null && element.getClassName().equals(CoroutineLRZScope.class.getName())) {
-                    int length = Math.min(5, stackTraceElements.length - i - 1);
+                String nowPackage = element.getClassName();
+                if (!isAppStack && nowPackage.contains(packageName)) {
+                    isAppStack = true;
+                    continue;
+                }
+                if (isAppStack && stackTrace == null && !nowPackage.contains(packageName)) {
+                    int length = Math.min(8, stackTraceElements.length - i - 1);
                     stackTrace = new StackTraceElement[length];
+                    i -= 1;
+                    if (i < 0) i = 0;
                 } else if (stackTrace != null && j < stackTrace.length) {
                     stackTrace[j] = element;
                     j += 1;
@@ -409,5 +418,10 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
     @Override
     public void setStackTraceExtraEnable(boolean stackTraceExtraEnable) {
         this.stackTraceExtraEnable = stackTraceExtraEnable;
+    }
+
+    @Override
+    public boolean getStackTraceExtraEnable() {
+        return this.stackTraceExtraEnable;
     }
 }
