@@ -3,12 +3,14 @@ package com.lrz.coroutine.flow.net;
 import android.util.Log;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.flow.Function;
 import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.Observer;
 import com.lrz.coroutine.flow.Task;
 
 import okhttp3.Call;
+import okhttp3.OkHttpClient;
 
 /**
  * Author:  liurongzhi
@@ -49,6 +51,12 @@ public class ReqObservable<T> extends Observable<T> {
 
     public synchronized ReqObservable<T> subscribe(Dispatcher dispatcher, Observer<T> result) {
         return (ReqObservable<T>) super.subscribe(dispatcher, result);
+    }
+
+    @Override
+    protected void onSubscribe(T t) {
+        if (t == null) return;
+        super.onSubscribe(t);
     }
 
     /**
@@ -92,6 +100,13 @@ public class ReqObservable<T> extends Observable<T> {
         if (getError() == null) {
             error(new DefReqError());
         }
+        // 提高性能，在这里拦截一部分请求，可以减少分配线程后再判断，浪费资源
+        synchronized (RequestBuilder.REQUEST_BUILDERS) {
+            if (CommonRequest.requestNum >= CommonRequest.MAX_REQUEST) {
+                RequestBuilder.REQUEST_BUILDERS.add((RequestBuilder<?>) getTask());
+                return this;
+            }
+        }
         return super.execute(dispatcher);
     }
 
@@ -108,16 +123,22 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized void cancel() {
+        RequestBuilder<?> task = (RequestBuilder<?>) getTask();
+        int realHash = task.getObservable().hashCode();
+        synchronized (RequestBuilder.REQUEST_BUILDERS) {
+            RequestBuilder.REQUEST_BUILDERS.remove(task);
+        }
         super.cancel();
-        if (HttpClient.instance != null) {
-            for (Call call : HttpClient.instance.getClient().dispatcher().queuedCalls()) {
-                if (Integer.valueOf(hashCode()).equals(call.request().tag())) {
+        OkHttpClient client = task.getRequest().getClient();
+        if (client != null) {
+            for (Call call : client.dispatcher().queuedCalls()) {
+                if (Integer.valueOf(realHash).equals(call.request().tag())) {
                     call.cancel();
                     return;
                 }
             }
-            for (Call call : HttpClient.instance.getClient().dispatcher().runningCalls()) {
-                if (Integer.valueOf(hashCode()).equals(call.request().tag())) {
+            for (Call call : client.dispatcher().runningCalls()) {
+                if (Integer.valueOf(realHash).equals(call.request().tag())) {
                     call.cancel();
                     return;
                 }
@@ -155,7 +176,7 @@ public class ReqObservable<T> extends Observable<T> {
 
         @Override
         public void onError(RequestException error) {
-            Log.e("coroutine_def_error", "未处理的错误", error);
+            LLog.e("coroutine_def_error", "未处理的错误", error);
         }
     }
 }

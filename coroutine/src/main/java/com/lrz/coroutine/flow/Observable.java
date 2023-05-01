@@ -392,7 +392,7 @@ public class Observable<T> implements Closeable {
      *
      * @param t 结果
      */
-    void onSubscribe(T t) {
+    protected void onSubscribe(T t) {
         Observer<T> result = this.result;
         if (result != null) {
             if (dispatcher == null) {

@@ -32,11 +32,16 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
      */
     private boolean stackTraceExtraEnable = false;
     /**
-     * 核心线程数量保持为 cpu 个数0.8，保证并发时的性能
+     * 总线程数量
+     * 低于4核手机：4核+2非+1后台 = 7
+     * 8核手机：8核+4非+2后台 = 14
+     * 核心线程数量保持为 cpu 个数0.8，保证并发时的性能，最少4个核心线程
      */
-    private final int MAX_COUNT = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 2);
+    private final int MAX_COUNT = Math.max(Runtime.getRuntime().availableProcessors(), 4);
     /**
      * 最大弹性线程数量
+     * 根据核心线程数最少4个计算，非核心线程数量最少2个
+     * 思考：如果在使用网络模块的情况下，非核数量应该再多一点，例如=核心线程数量
      */
     private int ELASTIC_COUNT = MAX_COUNT / 2 > 1 ? MAX_COUNT / 2 : 2;
     /**

@@ -91,21 +91,44 @@ public class FirstFragment extends Fragment {
         });
     }
 
-    private void emit() {
-        ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
-            {
-                url("https://baidu.com");
-            }
-        }).subscribe(Dispatcher.IO, s -> {
-            Log.i("---任务request-subIO", Thread.currentThread().getName());
-        }).error(error -> {
-            Log.e("---任务request-error", Thread.currentThread().getName(),error);
-        }).subscribe(Dispatcher.IO, s -> {
-            Log.i("---任务request-subscribe2", Thread.currentThread().getName());
-        }).GET().subscribe(s -> {
-            Log.i("---任务request-sub", Thread.currentThread().getName());
-        });
+    ReqObservable<String> observable4;
+    ReqObservable<String> observable8;
 
+    private void emit() {
+        for (int i = 0; i < 10; i++) {
+            final int ii = i;
+            ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
+                {
+                    url("https://www.baidu.com");
+                }
+            }).subscribe(Dispatcher.IO, s -> {
+                Log.i("---request:" + ii, "执行");
+
+            }).error(error -> {
+                Log.e("---request-error" + ii, "", error);
+            }).GET();
+            if (ii == 4) {
+                observable4 = observable3;
+            }
+            if (ii == 8) {
+                observable8 = observable3;
+            }
+        }
+        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+            @Override
+            public void run() {
+                if (observable4 != null) {
+                    observable4.cancel();
+                    observable4 = null;
+                    Log.e("---request-cancel4" , "");
+                }
+                if (observable8 != null) {
+                    observable8.cancel();
+                    observable8 = null;
+                    Log.e("---request-cancel8" , "");
+                }
+            }
+        },50);
     }
 
     private void streamSet() {

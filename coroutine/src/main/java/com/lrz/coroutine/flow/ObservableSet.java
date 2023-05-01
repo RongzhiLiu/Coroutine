@@ -57,7 +57,7 @@ public class ObservableSet extends Observable<Boolean> {
      * @param aBoolean
      */
     @Override
-    void onSubscribe(Boolean aBoolean) {
+   protected void onSubscribe(Boolean aBoolean) {
         if (observables == null || count.get() >= observables.length) {
             super.onSubscribe(aBoolean);
         }

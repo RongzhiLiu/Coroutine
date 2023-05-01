@@ -6,6 +6,8 @@ package com.lrz.coroutine.flow.net;
  * Description:
  */
 public final class ResponseCode {
+    // 队列已满
+    public static final int CODE_ERROR_WAIT = -2;
     // 无网络
     public static final int CODE_ERROR_NO_NET = -1;
     // 响应内容是null

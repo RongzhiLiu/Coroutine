@@ -26,6 +26,9 @@ import okhttp3.ResponseBody;
  * Description: http请求类
  */
 public class CommonRequest {
+    // 至少并发5，超过5核手机并发数量是核心数量
+    public static int MAX_REQUEST = Math.max(Runtime.getRuntime().availableProcessors(), 5);
+    static int requestNum = 0;
     //预解析字段，可将 自定义的code归类到错误中
     // code的值不等于200，则表示服务获取失败
     private String codeStr;
@@ -79,6 +82,7 @@ public class CommonRequest {
     public <T> ReqObservable<T> create(RequestBuilder<T> task) {
         ReqObservable<T> observable;
         observable = new ReqObservable<>(task);
+        task.setRequest(this);
         task.setObservable(observable);
         return observable;
     }
@@ -88,6 +92,10 @@ public class CommonRequest {
 
     public CommonRequest(OkHttpClient client) {
         this.client = client;
+    }
+
+    public OkHttpClient getClient() {
+        return client;
     }
 
     public <D> D requestGet(String url, Class<D> dClass) throws RequestException {
@@ -182,12 +190,26 @@ public class CommonRequest {
         if (Looper.getMainLooper() == Looper.myLooper()) {
             throw new RequestException("can not request in main thread!", ResponseCode.CODE_ERROR_THREAD);
         }
+        synchronized (RequestBuilder.REQUEST_BUILDERS) {
+            if (requestNum >= MAX_REQUEST) {
+                throw new RequestException("request will more than 5,please wait", ResponseCode.CODE_ERROR_WAIT);
+            }
+            requestNum += 1;
+        }
         Call call;
         Response response;
         try {
             call = mOkHttp.newCall(builder.tag(tag).build());
             response = call.execute();
+            synchronized (RequestBuilder.REQUEST_BUILDERS) {
+                requestNum -= 1;
+            }
+            RequestBuilder.exeWait();
         } catch (Exception e) {
+            synchronized (RequestBuilder.REQUEST_BUILDERS) {
+                requestNum -= 1;
+            }
+            RequestBuilder.exeWait();
             throw new RequestException("Network exception, please check the network! or look at Caused by ...", e, ResponseCode.CODE_ERROR_NO_NET);
         }
         ResponseBody body = response.body();
