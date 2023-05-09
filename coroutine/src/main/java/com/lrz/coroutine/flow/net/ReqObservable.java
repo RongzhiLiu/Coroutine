@@ -1,7 +1,5 @@
 package com.lrz.coroutine.flow.net;
 
-import android.util.Log;
-
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.flow.Function;
@@ -96,7 +94,7 @@ public class ReqObservable<T> extends Observable<T> {
     }
 
     @Override
-    public synchronized Observable<T> execute(Dispatcher dispatcher) {
+    public synchronized ReqObservable<T> execute(Dispatcher dispatcher) {
         if (getError() == null) {
             error(new DefReqError());
         }
@@ -107,18 +105,20 @@ public class ReqObservable<T> extends Observable<T> {
                 return this;
             }
         }
-        return super.execute(dispatcher);
+        super.execute(dispatcher);
+        return this;
     }
 
     @Override
-    public synchronized Observable<T> execute() {
+    public synchronized ReqObservable<T> execute() {
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
         if (getError() == null) {
             error(new DefReqError());
         }
-        return super.execute();
+        super.execute();
+        return this;
     }
 
     @Override

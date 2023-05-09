@@ -192,7 +192,7 @@ public class CommonRequest {
         }
         synchronized (RequestBuilder.REQUEST_BUILDERS) {
             if (requestNum >= MAX_REQUEST) {
-                throw new RequestException("request will more than 5,please wait", ResponseCode.CODE_ERROR_WAIT);
+                throw new RequestException("Request will more than MAX_REQUEST,please hold on", ResponseCode.CODE_ERROR_WAIT);
             }
             requestNum += 1;
         }
