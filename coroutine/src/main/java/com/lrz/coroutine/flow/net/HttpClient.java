@@ -57,7 +57,7 @@ public class HttpClient {
         @Override
         public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
-            if (LLog.logLevel >= LLog.WARN) {
+            if (LLog.logLevel < LLog.WARN) {
                 logRequest(request);
             }
             Response proceed = chain.proceed(request);
