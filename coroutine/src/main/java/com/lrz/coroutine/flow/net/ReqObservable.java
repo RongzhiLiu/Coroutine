@@ -124,23 +124,28 @@ public class ReqObservable<T> extends Observable<T> {
     @Override
     public synchronized void cancel() {
         RequestBuilder<?> task = (RequestBuilder<?>) getTask();
-        int realHash = task.getObservable().hashCode();
+        int realHash = -1;
+        if (task != null) {
+            realHash = task.getObservable().hashCode();
+        }
         synchronized (RequestBuilder.REQUEST_BUILDERS) {
             RequestBuilder.REQUEST_BUILDERS.remove(task);
         }
         super.cancel();
-        OkHttpClient client = task.getRequest().getClient();
-        if (client != null) {
-            for (Call call : client.dispatcher().queuedCalls()) {
-                if (Integer.valueOf(realHash).equals(call.request().tag())) {
-                    call.cancel();
-                    return;
+        if (task != null) {
+            OkHttpClient client = task.getRequest().getClient();
+            if (client != null) {
+                for (Call call : client.dispatcher().queuedCalls()) {
+                    if (Integer.valueOf(realHash).equals(call.request().tag())) {
+                        call.cancel();
+                        return;
+                    }
                 }
-            }
-            for (Call call : client.dispatcher().runningCalls()) {
-                if (Integer.valueOf(realHash).equals(call.request().tag())) {
-                    call.cancel();
-                    return;
+                for (Call call : client.dispatcher().runningCalls()) {
+                    if (Integer.valueOf(realHash).equals(call.request().tag())) {
+                        call.cancel();
+                        return;
+                    }
                 }
             }
         }

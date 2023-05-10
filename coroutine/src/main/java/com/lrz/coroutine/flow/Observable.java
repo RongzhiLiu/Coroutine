@@ -459,10 +459,6 @@ public class Observable<T> implements Closeable {
             job = null;
             LLog.d("COROUTINE_OBS", "observable stream close");
         }
-        task = null;
-        map = null;
-        error = null;
-        result = null;
         //向上递归取消
         Observable<?> observable = preObservable;
         if (observable != null) {
@@ -470,15 +466,19 @@ public class Observable<T> implements Closeable {
             observable.nextObservable = null;
             observable.cancel();
         }
-        preObservable = null;
-
         Observable<?> next = nextObservable;
         if (next != null) {
             //断开双向链表
             next.preObservable = null;
             next.cancel();
         }
+
         nextObservable = null;
+        preObservable = null;
+        task = null;
+        map = null;
+        error = null;
+        result = null;
         isCancel = true;
     }
 

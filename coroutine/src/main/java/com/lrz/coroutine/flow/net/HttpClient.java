@@ -129,7 +129,7 @@ public class HttpClient {
                 }
             }
             sb.append("\n");
-            sb.append("Body:\n");
+            sb.append("Body:");
             try {
                 sb.append(new String(response.peekBody(1024 * 1024).bytes()));
             } catch (IOException e) {
