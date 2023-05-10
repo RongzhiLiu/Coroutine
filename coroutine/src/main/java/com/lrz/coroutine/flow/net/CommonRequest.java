@@ -27,7 +27,7 @@ import okhttp3.ResponseBody;
  */
 public class CommonRequest {
     // 至少并发5，超过5核手机并发数量是核心数量
-    public static int MAX_REQUEST = Math.max(Runtime.getRuntime().availableProcessors(), 5);
+    public static int MAX_REQUEST = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 5);
     static int requestNum = 0;
     //预解析字段，可将 自定义的code归类到错误中
     // code的值不等于200，则表示服务获取失败
@@ -115,7 +115,6 @@ public class CommonRequest {
         if (url == null || url.length() < 1) {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
-        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
@@ -138,7 +137,7 @@ public class CommonRequest {
             }
         }
         builder.url(httpBuilder.build());
-        return execute(mOkHttp, builder, dClass, tag);
+        return execute(client, builder, dClass, tag);
     }
 
     public String requestPost(final String url, Map<String, String> params) throws RequestException {
@@ -158,7 +157,6 @@ public class CommonRequest {
             throw new RequestException("url is illegal,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
         }
 
-        OkHttpClient mOkHttp = client;
         HttpUrl httpUrl = HttpUrl.parse(url);
         if (httpUrl == null) {
             throw new RequestException("url parse error,please check you url", ResponseCode.CODE_ERROR_URL_ILLEGAL);
@@ -183,7 +181,7 @@ public class CommonRequest {
                 }
             }
         }
-        return execute(mOkHttp, builder, dClass, tag);
+        return execute(client, builder, dClass, tag);
     }
 
     private <D> D execute(OkHttpClient mOkHttp, okhttp3.Request.Builder builder, Class<D> dClass, int tag) throws RequestException {
@@ -214,7 +212,7 @@ public class CommonRequest {
         }
         ResponseBody body = response.body();
         if (body != null) {
-            if (response.code() == 200 || response.code() == 201) {
+            if (response.isSuccessful()) {
                 final String json;
                 try {
                     json = body.string();

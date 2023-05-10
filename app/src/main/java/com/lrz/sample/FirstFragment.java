@@ -68,14 +68,6 @@ public class FirstFragment extends Fragment {
                 }).error(error -> System.out.println("error--------thread=" + Thread.currentThread().getName())).execute(Dispatcher.IO);
             }
         });
-
-        CoroutineLRZContext.Create(new Task<String>() {
-            @Override
-            public String submit() {
-                System.out.println("submit--------thread=" + Thread.currentThread().getName());
-                return "null";
-            }
-        }).execute(Dispatcher.MAIN);
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -102,7 +94,7 @@ public class FirstFragment extends Fragment {
                     url("https://www.baidu.com");
                 }
             }).subscribe(Dispatcher.IO, s -> {
-                Log.i("---request:" + ii, "执行");
+                Log.i("---request:" + ii, "执行"+Thread.currentThread().getName());
 
             }).error(error -> {
                 Log.e("---request-error" + ii, "", error);

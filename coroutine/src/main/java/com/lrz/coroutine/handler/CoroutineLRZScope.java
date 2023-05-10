@@ -35,7 +35,7 @@ class CoroutineLRZScope implements CoroutineLRZContext, IHandlerThread.OnHandler
      * 总线程数量
      * 低于4核手机：4核+2非+1后台 = 7
      * 8核手机：8核+4非+2后台 = 14
-     * 核心线程数量保持为 cpu 个数0.8，保证并发时的性能，最少4个核心线程
+     * 核心线程数量保持为 cpu 个数，保证并发时的性能，最少4个核心线程
      */
     private final int MAX_COUNT = Math.max(Runtime.getRuntime().availableProcessors(), 4);
     /**

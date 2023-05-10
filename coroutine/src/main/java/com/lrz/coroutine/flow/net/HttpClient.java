@@ -13,6 +13,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okio.Buffer;
 
 /**
  * Author And Date: liurongzhi on 2019/11/6.
@@ -33,10 +34,10 @@ public class HttpClient {
                                 .connectTimeout(10, TimeUnit.SECONDS)
                                 .readTimeout(10, TimeUnit.SECONDS)
                                 .writeTimeout(10, TimeUnit.SECONDS)
-                                .addInterceptor(interceptor)
+                                .addInterceptor(new LogInterceptor())
                                 .build();
                     } else {
-                        mOkHttp = factory.createClient().addInterceptor(interceptor).build();
+                        mOkHttp = factory.createClient().addInterceptor(new LogInterceptor()).build();
                     }
                 }
             }
@@ -52,16 +53,18 @@ public class HttpClient {
         OkHttpClient.Builder createClient();
     }
 
-    private final Interceptor interceptor = new Interceptor() {
+    public static class LogInterceptor implements Interceptor {
         @Override
         public Response intercept(Chain chain) throws IOException {
             Request request = chain.request();
+            if (LLog.logLevel >= LLog.WARN) {
+                logRequest(request);
+            }
             Response proceed = chain.proceed(request);
             if (proceed.isSuccessful()) {
                 if (LLog.logLevel >= LLog.WARN) {
                     return proceed;
                 }
-                logRequest(request);
                 logResponse(proceed);
             } else {
                 String message = proceed.message();
@@ -86,10 +89,20 @@ public class HttpClient {
                 }
             }
             sb.append("\n");
-            sb.append("Body:");
+
             RequestBody body = request.body();
             if (body != null) {
-                sb.append(body);
+                sb.append("Content-Type:");
+                sb.append(body.contentType());
+                sb.append("\n");
+                sb.append("Body:");
+                Buffer buffer = new Buffer();
+                try {
+                    body.writeTo(buffer);
+                    sb.append(buffer.readUtf8());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             sb.append("\n······························  ===== HOLD ON =====  ······························");
             Log.i("REQUEST", sb.toString());
@@ -125,5 +138,5 @@ public class HttpClient {
             sb.append("\n······························  ===== SUCCESS =====  ······························");
             Log.i("REQUEST", sb.toString());
         }
-    };
+    }
 }
