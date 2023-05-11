@@ -64,7 +64,9 @@ public class ReqObservable<T> extends Observable<T> {
      */
     @Override
     public final synchronized ReqObservable<T> GET() {
-        ((RequestBuilder<?>) getTask()).method(0);
+        if (getTask() instanceof RequestBuilder) {
+            ((RequestBuilder<?>) getTask()).method(0);
+        }
         // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
@@ -80,7 +82,9 @@ public class ReqObservable<T> extends Observable<T> {
      */
     @Override
     public final synchronized ReqObservable<T> POST() {
-        ((RequestBuilder<?>) getTask()).method(1);
+        if (getTask() instanceof RequestBuilder) {
+            ((RequestBuilder<?>) getTask()).method(1);
+        }
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
@@ -89,20 +93,24 @@ public class ReqObservable<T> extends Observable<T> {
     }
 
     public ReqObservable<T> method(int method) {
-        ((RequestBuilder<?>) getTask()).method(method);
+        if (getTask() instanceof RequestBuilder) {
+            ((RequestBuilder<?>) getTask()).method(method);
+        }
         return this;
     }
 
     @Override
     public synchronized ReqObservable<T> execute(Dispatcher dispatcher) {
-        if (getError() == null) {
-            error(new DefReqError());
-        }
-        // 提高性能，在这里拦截一部分请求，可以减少分配线程后再判断，浪费资源
-        synchronized (RequestBuilder.REQUEST_BUILDERS) {
-            if (CommonRequest.requestNum >= CommonRequest.MAX_REQUEST) {
-                RequestBuilder.REQUEST_BUILDERS.add((RequestBuilder<?>) getTask());
-                return this;
+        if (getTask() instanceof RequestBuilder) {
+            if (getError() == null) {
+                error(new DefReqError());
+            }
+            // 提高性能，在这里拦截一部分请求，可以减少分配线程后再判断，浪费资源
+            synchronized (RequestBuilder.REQUEST_BUILDERS) {
+                if (CommonRequest.requestNum >= CommonRequest.MAX_REQUEST) {
+                    RequestBuilder.REQUEST_BUILDERS.add((RequestBuilder<?>) getTask());
+                    return this;
+                }
             }
         }
         super.execute(dispatcher);
@@ -111,11 +119,13 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized ReqObservable<T> execute() {
-        if (taskDispatcher == null) {
-            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
-        }
-        if (getError() == null) {
-            error(new DefReqError());
+        if (getTask() instanceof RequestBuilder) {
+            if (taskDispatcher == null) {
+                taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+            }
+            if (getError() == null) {
+                error(new DefReqError());
+            }
         }
         super.execute();
         return this;
@@ -123,17 +133,17 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized void cancel() {
-        RequestBuilder<?> task = (RequestBuilder<?>) getTask();
+        Task<?> task = getTask();
         int realHash = -1;
-        if (task != null) {
+        if (task instanceof RequestBuilder) {
             realHash = task.getObservable().hashCode();
-        }
-        synchronized (RequestBuilder.REQUEST_BUILDERS) {
-            RequestBuilder.REQUEST_BUILDERS.remove(task);
+            synchronized (RequestBuilder.REQUEST_BUILDERS) {
+                RequestBuilder.REQUEST_BUILDERS.remove(task);
+            }
         }
         super.cancel();
-        if (task != null) {
-            OkHttpClient client = task.getRequest().getClient();
+        if (task instanceof RequestBuilder) {
+            OkHttpClient client = ((RequestBuilder<?>) task).getRequest().getClient();
             if (client != null) {
                 for (Call call : client.dispatcher().queuedCalls()) {
                     if (Integer.valueOf(realHash).equals(call.request().tag())) {
