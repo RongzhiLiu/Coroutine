@@ -30,8 +30,7 @@ public class ReqObservable<T> extends Observable<T> {
     }
 
     public synchronized ReqObservable<T> error(Dispatcher dispatcher, ReqError error) {
-        super.error(dispatcher, error);
-        return this;
+        return (ReqObservable<T>) super.error(dispatcher, error);
     }
 
     @Override
@@ -71,8 +70,7 @@ public class ReqObservable<T> extends Observable<T> {
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
-        execute(taskDispatcher);
-        return this;
+        return execute(taskDispatcher);
     }
 
     /**
@@ -88,8 +86,7 @@ public class ReqObservable<T> extends Observable<T> {
         if (taskDispatcher == null) {
             taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
         }
-        execute(taskDispatcher);
-        return this;
+        return execute(taskDispatcher);
     }
 
     public ReqObservable<T> method(int method) {
@@ -113,8 +110,7 @@ public class ReqObservable<T> extends Observable<T> {
                 }
             }
         }
-        super.execute(dispatcher);
-        return this;
+        return (ReqObservable<T>) super.execute(dispatcher);
     }
 
     @Override
@@ -127,8 +123,7 @@ public class ReqObservable<T> extends Observable<T> {
                 error(new DefReqError());
             }
         }
-        super.execute();
-        return this;
+        return (ReqObservable<T>) super.execute();
     }
 
     @Override

@@ -65,7 +65,7 @@ public class ObservableSet extends Observable<Boolean> {
 
     @Override
     protected synchronized Task<?> getTask() {
-        Observable pre = preObservable;
+        Observable<?> pre = preObservable;
         if (pre != null) {
             return pre.getTask();
         } else if (task == null) {
