@@ -1,6 +1,5 @@
 package com.lrz.coroutine.flow.net;
 
-import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Task;
 
@@ -68,6 +67,8 @@ public abstract class RequestBuilder<B> extends Task<B> {
                 }
                 return null;
             } else throw e;
+        } finally {
+            RequestBuilder.exeWait();
         }
 
     }

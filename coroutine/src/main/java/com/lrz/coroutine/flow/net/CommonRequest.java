@@ -27,8 +27,8 @@ import okhttp3.ResponseBody;
  */
 public class CommonRequest {
     // 至少并发5，超过5核手机并发数量是核心数量
-    public static int MAX_REQUEST = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 5);
-    static int requestNum = 0;
+    public static volatile int MAX_REQUEST = (int) Math.max(Runtime.getRuntime().availableProcessors() * 0.8f, 5);
+    static volatile int requestNum = 0;
     //预解析字段，可将 自定义的code归类到错误中
     // code的值不等于200，则表示服务获取失败
     private String codeStr;
@@ -202,12 +202,10 @@ public class CommonRequest {
             synchronized (RequestBuilder.REQUEST_BUILDERS) {
                 requestNum -= 1;
             }
-            RequestBuilder.exeWait();
         } catch (Exception e) {
             synchronized (RequestBuilder.REQUEST_BUILDERS) {
                 requestNum -= 1;
             }
-            RequestBuilder.exeWait();
             throw new RequestException("Network exception, please check the network! or look at Caused by ...", e, ResponseCode.CODE_ERROR_NO_NET);
         }
         ResponseBody body = response.body();

@@ -52,7 +52,7 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     protected void onSubscribe(T t) {
-        if (t == null) return;
+        if (t == null && getTask() instanceof RequestBuilder) return;
         super.onSubscribe(t);
     }
 
@@ -158,11 +158,12 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized <F> ReqObservable<F> map(Function<T, F> function) {
-        this.map = function;
-        ReqObservable<F> observableF = new ReqObservable<>();
-        observableF.preObservable = this;
-        nextObservable = observableF;
-        return observableF;
+        return (ReqObservable<F>) super.map(function);
+    }
+
+    @Override
+    protected synchronized ReqObservable<T> map() {
+        return (ReqObservable<T>) super.map();
     }
 
     private boolean hasSubscriber() {

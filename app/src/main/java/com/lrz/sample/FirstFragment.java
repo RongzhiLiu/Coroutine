@@ -54,20 +54,19 @@ public class FirstFragment extends Fragment {
         binding.buttonIo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                CoroutineLRZContext.Create(new Task<String>() {
-                    @Override
-                    public String submit() {
-                        return "null";
+                ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
+                    {
+                        url("https://www.baidu.com");
                     }
-                }).subscribe(new Observer<String>() {
-                    @Override
-                    public void onSubscribe(String s) {
-                        System.out.println("onSubscribe--------thread=" + Thread.currentThread().getName());
-                        int i = 1 / 0;
-                    }
-                }).error(error -> System.out.println("error--------thread=" + Thread.currentThread().getName())).execute(Dispatcher.IO);
+                }).subscribe(Dispatcher.IO, s -> {
+                    Log.i("---request:", "执行"+Thread.currentThread().getName());
+
+                }).error(error -> {
+                    Log.e("---request-error", "", error);
+                }).GET();
             }
         });
+
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
