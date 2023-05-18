@@ -291,7 +291,15 @@ public class Observable<T> implements Closeable {
             preObservable.execute(dispatcher);
             return this;
         }
-        if (task != null) {
+        if (task == null) return this;
+        if (dispatcher == null) return this;
+        long delay = getDelay();
+        long interval;
+        if (delay > 0) {
+            job = CoroutineLRZContext.INSTANCE.executeDelay(dispatcher, task, delay);
+        } else if ((interval = getInterval()) > 0) {
+            job = CoroutineLRZContext.INSTANCE.executeTime(dispatcher, task, interval);
+        } else {
             job = CoroutineLRZContext.INSTANCE.execute(dispatcher, task);
         }
         return this;
@@ -325,7 +333,7 @@ public class Observable<T> implements Closeable {
      */
     public synchronized Observable<T> executeTime(Dispatcher dispatcher, long interval) {
         thread(dispatcher);
-        interval(delay);
+        interval(interval);
         //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
         if (task instanceof Emitter) return this;
         if (task == null && preObservable != null) {
