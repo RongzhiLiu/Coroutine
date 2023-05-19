@@ -39,15 +39,23 @@ public class CommonRequest {
     /**
      * 设置设置预解析的code字段
      */
-    public static void setCodeStr(String codeStr) {
+    public static void SetCodeStr(String codeStr) {
         CommonRequest.request.codeStr = codeStr;
     }
 
     /**
      * 设置设置预解析的message字段
      */
-    public static void setMsgStr(String msgStr) {
+    public static void SetMsgStr(String msgStr) {
         CommonRequest.request.msgStr = msgStr;
+    }
+
+    public void setCodeStr(String codeStr) {
+        this.codeStr = codeStr;
+    }
+
+    public void setMsgStr(String msgStr) {
+        this.msgStr = msgStr;
     }
 
     /**

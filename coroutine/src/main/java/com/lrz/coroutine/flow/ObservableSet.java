@@ -14,6 +14,7 @@ public class ObservableSet extends Observable<Boolean> {
     Observable<?>[] observables;
     AtomicInteger count = new AtomicInteger();
     boolean closeOnError = false;
+    volatile long timeOut;
 
     protected ObservableSet() {
     }
@@ -26,7 +27,7 @@ public class ObservableSet extends Observable<Boolean> {
         ObservableSet set = new ObservableSet(observable);
         if (set.observables != null && set.observables.length > 0) {
             for (Observable<?> ob : set.observables) {
-                ob.subscribe((Observer) o -> set.checkResult());
+                ob.subscribe(o -> set.checkResult());
             }
         }
         return set;
@@ -37,15 +38,82 @@ public class ObservableSet extends Observable<Boolean> {
         set.closeOnError = closeOnError;
         if (set.observables != null && set.observables.length > 0) {
             for (Observable<?> ob : set.observables) {
-                ob.subscribe((Observer) o -> set.checkResult());
+                ob.subscribe(o -> set.checkResult());
             }
         }
         return set;
     }
 
+    private Observable<Boolean> timeObservable;
+    private Dispatcher timeDispatcher;
+    private boolean cancelOnTimeOut = false;
+
+    public synchronized ObservableSet timeOut(long timeOut, Observer<Void> observer) {
+        return timeOut(timeOut, Dispatcher.MAIN, observer);
+    }
+
+    public synchronized ObservableSet cancelOnTimeOut(boolean cancelOnTimeOut) {
+        this.cancelOnTimeOut = cancelOnTimeOut;
+        return this;
+    }
+
+    public Observable<Boolean> getTimeObservable() {
+        ObservableSet set = this;
+        while (set != null) {
+            if (set.timeObservable != null) return set.timeObservable;
+            set = (ObservableSet) set.preObservable;
+        }
+        return null;
+    }
+
+    public Dispatcher getTimeDispatcher() {
+        ObservableSet set = this;
+        while (set != null) {
+            if (set.timeDispatcher != null) return set.timeDispatcher;
+            set = (ObservableSet) set.preObservable;
+        }
+        return null;
+    }
+
+    public long getTimeOut() {
+        ObservableSet set = this;
+        while (set != null) {
+            if (set.timeOut != 0) return set.timeOut;
+            set = (ObservableSet) set.preObservable;
+        }
+        return 0;
+    }
+
+    /**
+     * 从真正执行开始算超时
+     */
+    public synchronized ObservableSet timeOut(long timeOut, Dispatcher dispatcher, Observer<Void> observer) {
+        if (timeOut == 0 || dispatcher == null) return this;
+        this.timeOut = timeOut;
+        this.timeDispatcher = dispatcher;
+        timeObservable = CoroutineLRZContext.Create(new Task<Boolean>() {
+            @Override
+            public Boolean submit() {
+                System.out.println("------num="+count.get());
+                return observables != null && count.get() < observables.length;
+            }
+        }).subscribe(aBoolean -> {
+            if (Boolean.TRUE.equals(aBoolean)) {
+                //超时
+                if (cancelOnTimeOut) {
+                    cancel();
+                }
+                if (observer != null) observer.onSubscribe(null);
+            }
+        });
+        return this;
+    }
+
     private synchronized void checkResult() {
         if (observables != null && count.incrementAndGet() >= observables.length) {
             if (result != null) {
+                Observable<?> timeObservable = getTimeObservable();
+                if (timeObservable != null) timeObservable.cancel();
                 onSubscribe(true);
             }
         }
@@ -57,7 +125,7 @@ public class ObservableSet extends Observable<Boolean> {
      * @param aBoolean
      */
     @Override
-   protected void onSubscribe(Boolean aBoolean) {
+    protected void onSubscribe(Boolean aBoolean) {
         if (observables == null || count.get() >= observables.length) {
             super.onSubscribe(aBoolean);
         }
@@ -107,22 +175,37 @@ public class ObservableSet extends Observable<Boolean> {
     public synchronized Observable<Boolean> execute() {
         Dispatcher dispatcher = getTaskDispatch();
         if (dispatcher == null) {
-            dispatcher = Dispatcher.MAIN;
+            thread(Dispatcher.MAIN);
         }
-        long delay = getDelay();
-        long interval;
-
-        Task<?> task = getTask();
-        if (delay > 0) {
-            job = CoroutineLRZContext.INSTANCE.executeDelay(dispatcher, task, delay);
-        } else if ((interval = getInterval()) > 0) {
-            job = CoroutineLRZContext.INSTANCE.executeTime(dispatcher, task, interval);
-        } else {
-            job = CoroutineLRZContext.INSTANCE.execute(dispatcher, task);
+        Observable<?> timeObservable = getTimeObservable();
+        if (timeObservable != null) {
+            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut());
         }
-        return this;
+        return super.execute();
     }
 
+    @Override
+    public synchronized Observable<Boolean> execute(Dispatcher dispatcher) {
+        Observable<?> timeObservable = getTimeObservable();
+        if (timeObservable != null) {
+            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut());
+        }
+        return super.execute(dispatcher);
+    }
+
+    @Override
+    public synchronized Observable<Boolean> executeDelay(Dispatcher dispatcher, long delay) {
+        Observable<?> timeObservable = getTimeObservable();
+        if (timeObservable != null) {
+            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut() + delay);
+        }
+        return super.executeDelay(dispatcher, delay);
+    }
+
+    @Override
+    public synchronized Observable<Boolean> executeTime(Dispatcher dispatcher, long interval) {
+        return super.executeTime(dispatcher, interval);
+    }
 
     private void proxyError(Observable<?> ob) {
         if (getError() != null) {
@@ -178,6 +261,10 @@ public class ObservableSet extends Observable<Boolean> {
                 ob.cancel();
             }
             observables = null;
+        }
+        if (timeObservable != null) {
+            timeObservable.cancel();
+            timeObservable = null;
         }
         super.cancel();
     }

@@ -34,8 +34,8 @@ public class Observable<T> implements Closeable {
     /**
      * 双向链表结构，用于管理责任链中的 Observable，当使用map 函数时，会生成链表
      */
-    protected volatile Observable preObservable;
-    protected volatile Observable nextObservable;
+    protected volatile Observable<?> preObservable;
+    protected volatile Observable<?> nextObservable;
 
     public Observable(Task<T> task) {
         if (task == null) {
@@ -51,11 +51,11 @@ public class Observable<T> implements Closeable {
         return result;
     }
 
-    public Observable getPreObservable() {
+    public Observable<?> getPreObservable() {
         return preObservable;
     }
 
-    public Observable getNextObservable() {
+    public Observable<?> getNextObservable() {
         return nextObservable;
     }
 
@@ -257,12 +257,9 @@ public class Observable<T> implements Closeable {
      */
     public synchronized Observable<T> execute() {
         //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        Task<?> task = getTask();
         if (task instanceof Emitter) return this;
 
-        if (task == null && preObservable != null) {
-            preObservable.execute();
-            return this;
-        }
         if (task == null) return this;
         Dispatcher dispatcher = getTaskDispatch();
         if (dispatcher == null) return this;
@@ -286,11 +283,9 @@ public class Observable<T> implements Closeable {
     public synchronized Observable<T> execute(Dispatcher dispatcher) {
         thread(dispatcher);
         //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        Task<?> task = getTask();
         if (task instanceof Emitter) return this;
-        if (task == null && preObservable != null) {
-            preObservable.execute(dispatcher);
-            return this;
-        }
+
         if (task == null) return this;
         if (dispatcher == null) return this;
         long delay = getDelay();
@@ -315,11 +310,8 @@ public class Observable<T> implements Closeable {
         thread(dispatcher);
         delay(delay);
         //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        Task<?> task = getTask();
         if (task instanceof Emitter) return this;
-        if (task == null && preObservable != null) {
-            preObservable.executeDelay(dispatcher, delay);
-            return this;
-        }
         if (task != null)
             job = CoroutineLRZContext.INSTANCE.executeDelay(dispatcher, task, delay);
         return this;
@@ -335,12 +327,8 @@ public class Observable<T> implements Closeable {
         thread(dispatcher);
         interval(interval);
         //如果是发射器类型，则不主动执行，等到外部调用发射器发射结果事件即可
+        Task<?> task = getTask();
         if (task instanceof Emitter) return this;
-        if (task == null && preObservable != null) {
-            preObservable.executeTime(dispatcher, interval);
-            return this;
-        }
-
         if (task != null)
             job = CoroutineLRZContext.INSTANCE.executeTime(dispatcher, task, interval);
         return this;
@@ -352,19 +340,21 @@ public class Observable<T> implements Closeable {
      * @return
      */
     protected synchronized Task<?> getTask() {
-        Observable pre = preObservable;
-        if (pre != null) {
-            return pre.getTask();
+        Observable<?> pre = this;
+        while (pre != null) {
+            if (pre.task != null) return pre.task;
+            pre = pre.preObservable;
         }
         return task;
     }
 
     protected synchronized IError<Throwable> getError() {
-        Observable pre = preObservable;
-        if (pre != null) {
-            return pre.getError();
+        Observable<?> pre = this;
+        while (pre != null) {
+            if (pre.error != null) return pre.error;
+            pre = pre.preObservable;
         }
-        return error;
+        return null;
     }
 
     protected void onError(Throwable e) {

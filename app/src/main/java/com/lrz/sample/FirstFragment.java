@@ -59,7 +59,7 @@ public class FirstFragment extends Fragment {
                         url("https://www.baidu.com");
                     }
                 }).subscribe(Dispatcher.IO, s -> {
-                    Log.i("---request:", "执行"+Thread.currentThread().getName());
+                    Log.i("---request:", "执行" + Thread.currentThread().getName());
 
                 }).error(error -> {
                     Log.e("---request-error", "", error);
@@ -93,7 +93,7 @@ public class FirstFragment extends Fragment {
                     url("https://www.baidu.com");
                 }
             }).subscribe(Dispatcher.IO, s -> {
-                Log.i("---request:" + ii, "执行"+Thread.currentThread().getName());
+                Log.i("---request:" + ii, "执行" + Thread.currentThread().getName());
 
             }).error(error -> {
                 Log.e("---request-error" + ii, "", error);
@@ -111,15 +111,15 @@ public class FirstFragment extends Fragment {
                 if (observable4 != null) {
                     observable4.cancel();
                     observable4 = null;
-                    Log.e("---request-cancel4" , "");
+                    Log.e("---request-cancel4", "");
                 }
                 if (observable8 != null) {
                     observable8.cancel();
                     observable8 = null;
-                    Log.e("---request-cancel8" , "");
+                    Log.e("---request-cancel8", "");
                 }
             }
-        },50);
+        }, 50);
     }
 
     private void streamSet() {
@@ -127,6 +127,11 @@ public class FirstFragment extends Fragment {
             @Override
             public String submit() {
                 Log.i("---任务1", Thread.currentThread().getName());
+                try {
+                    Thread.sleep(2900);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return "";
             }
         }).subscribe(Dispatcher.IO, str -> {
@@ -148,6 +153,7 @@ public class FirstFragment extends Fragment {
         }).subscribe(Dispatcher.BACKGROUND, bean -> { //第二个订阅者
             Log.i("---任务2-BACK-subscribe", Thread.currentThread().getName());
         }).thread(Dispatcher.MAIN);//开始执行任务，并指定线程
+
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
             {
                 url("https://www.baidu.com");
@@ -160,13 +166,16 @@ public class FirstFragment extends Fragment {
             Log.i("---任务request-subscribe2", Thread.currentThread().getName());
         }).method(Method.GET);
 
-        ObservableSet.with(true, observable, observable2, observable3).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
-            Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
-        }).error(Dispatcher.MAIN, error -> {
-            Log.i("---set-error", Thread.currentThread().getName());
-        }).subscribe(Dispatcher.IO, aBoolean -> {
-            Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
-        }).execute();
+        ObservableSet.with(true, observable, observable2, observable3)
+                .cancelOnTimeOut(true)
+                .timeOut(3000, unused -> Log.i("---set-timeout", Thread.currentThread().getName()))
+                .subscribe(Dispatcher.BACKGROUND, aBoolean -> {
+                    Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+                }).error(Dispatcher.MAIN, error -> {
+                    Log.i("---set-error", Thread.currentThread().getName());
+                }).subscribe(Dispatcher.IO, aBoolean -> {
+                    Log.i("---set-subscribe2-io", Thread.currentThread().getName() + "   " + aBoolean);
+                }).execute();
 
 
     }
