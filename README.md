@@ -9,7 +9,7 @@
 maven { url 'https://jitpack.io' }
 ```
 ```java
-implementation 'com.github.RongzhiLiu:Coroutine:1.2.4'
+implementation 'com.github.RongzhiLiu:Coroutine:1.2.6'
 // 如果需要使用 http 请求功能，请添加以下依赖
 implementation "com.squareup.okhttp3:okhttp:4.10.0"
 implementation 'com.google.code.gson:gson:2.8.5'

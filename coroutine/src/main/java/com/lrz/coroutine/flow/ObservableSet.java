@@ -94,7 +94,6 @@ public class ObservableSet extends Observable<Boolean> {
         timeObservable = CoroutineLRZContext.Create(new Task<Boolean>() {
             @Override
             public Boolean submit() {
-                System.out.println("------num="+count.get());
                 return observables != null && count.get() < observables.length;
             }
         }).subscribe(aBoolean -> {
