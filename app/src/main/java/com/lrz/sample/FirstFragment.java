@@ -131,7 +131,7 @@ public class FirstFragment extends Fragment {
             public String submit() {
                 Log.i("---任务1", Thread.currentThread().getName());
                 try {
-                    Thread.sleep(2900);
+                    Thread.sleep(1900);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -171,7 +171,7 @@ public class FirstFragment extends Fragment {
 
         ObservableSet.with(true, observable, observable2, observable3)
                 .cancelOnTimeOut(true)
-                .timeOut(3000, unused -> Log.i("---set-timeout", Thread.currentThread().getName()))
+                .timeOut(2000, unused -> Log.i("---set-timeout", Thread.currentThread().getName()))
                 .subscribe(Dispatcher.BACKGROUND, aBoolean -> {
                     Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
                 }).error(Dispatcher.MAIN, error -> {

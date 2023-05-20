@@ -15,6 +15,7 @@ public class ObservableSet extends Observable<Boolean> {
     AtomicInteger count = new AtomicInteger();
     boolean closeOnError = false;
     volatile long timeOut;
+    private volatile boolean isTimeOut = false;
 
     protected ObservableSet() {
     }
@@ -85,6 +86,22 @@ public class ObservableSet extends Observable<Boolean> {
     }
 
     /**
+     * 是否已经超时
+     *
+     * @return true 超时
+     */
+    public synchronized boolean isTimeOut() {
+        return isTimeOut;
+    }
+
+    /**
+     * 设置是否已经超时，内部使用
+     */
+    private synchronized void timeOutAllReady() {
+        this.isTimeOut = true;
+    }
+
+    /**
      * 从真正执行开始算超时
      */
     public synchronized ObservableSet timeOut(long timeOut, Dispatcher dispatcher, Observer<Void> observer) {
@@ -98,6 +115,7 @@ public class ObservableSet extends Observable<Boolean> {
             }
         }).subscribe(aBoolean -> {
             if (Boolean.TRUE.equals(aBoolean)) {
+                timeOutAllReady();
                 //超时
                 if (cancelOnTimeOut) {
                     cancel();
@@ -109,7 +127,7 @@ public class ObservableSet extends Observable<Boolean> {
     }
 
     private synchronized void checkResult() {
-        if (observables != null && count.incrementAndGet() >= observables.length) {
+        if (!isTimeOut() && observables != null && count.incrementAndGet() >= observables.length) {
             if (result != null) {
                 Observable<?> timeObservable = getTimeObservable();
                 if (timeObservable != null) timeObservable.cancel();
