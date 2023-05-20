@@ -32,4 +32,14 @@ public abstract class Emitter<T> extends Task<T> {
             observable.onError(throwable);
         }
     }
+
+    /**
+     * 发送错误事件
+     * @param throwable 自定义或已有的异常
+     */
+    public void next(Throwable throwable) {
+        Observable<T> observable = this.observable;
+        if (observable == null || observable.isCancel()) return;
+        observable.onError(throwable);
+    }
 }

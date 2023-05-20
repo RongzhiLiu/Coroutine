@@ -359,8 +359,8 @@ public class Observable<T> implements Closeable {
 
     protected void onError(Throwable e) {
         if (isCancel) return;
-        IError error = this.error;
-        Task task = getTask();
+        IError<Throwable> error = getError();
+        Task<?> task = getTask();
         if (task != null) {
             StackTraceElement[] stackTraceExtra = task.getStackTraceExtra();
             if (stackTraceExtra != null) {
