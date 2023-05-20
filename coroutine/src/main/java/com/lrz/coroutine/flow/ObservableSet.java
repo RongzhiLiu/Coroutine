@@ -111,6 +111,7 @@ public class ObservableSet extends Observable<Boolean> {
         timeObservable = CoroutineLRZContext.Create(new Task<Boolean>() {
             @Override
             public Boolean submit() {
+                System.out.println("---" + count.get() + "   " + observables.length);
                 return observables != null && count.get() < observables.length;
             }
         }).subscribe(aBoolean -> {
@@ -250,6 +251,13 @@ public class ObservableSet extends Observable<Boolean> {
             IError error = this.error;
             if (observableSet.getErrorDispatcher() == null) {
                 observableSet.errorDispatcher = observableSet.dispatcher;
+            }
+            synchronized (observableSet) {
+                if (!observableSet.isTimeOut()
+                        && observableSet.observables != null
+                        && observableSet.count.incrementAndGet() >= observableSet.observables.length){
+                    if (observableSet.timeObservable != null) observableSet.timeObservable.cancel();
+                }
             }
             if (error != null) {
                 if (oldDispatch != null) {

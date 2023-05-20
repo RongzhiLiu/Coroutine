@@ -131,10 +131,11 @@ public class FirstFragment extends Fragment {
             public String submit() {
                 Log.i("---任务1", Thread.currentThread().getName());
                 try {
-                    Thread.sleep(1900);
+                    Thread.sleep(1000);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                int i= 1/0;
                 return "";
             }
         }).subscribe(Dispatcher.IO, str -> {
@@ -169,7 +170,7 @@ public class FirstFragment extends Fragment {
             Log.i("---任务request-subscribe2", Thread.currentThread().getName());
         }).method(Method.GET);
 
-        ObservableSet.with(true, observable, observable2, observable3)
+        ObservableSet.with(false, observable, observable2, observable3)
                 .cancelOnTimeOut(true)
                 .timeOut(2000, unused -> Log.i("---set-timeout", Thread.currentThread().getName()))
                 .subscribe(Dispatcher.BACKGROUND, aBoolean -> {
