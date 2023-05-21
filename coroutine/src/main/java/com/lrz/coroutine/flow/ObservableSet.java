@@ -3,19 +3,56 @@ package com.lrz.coroutine.flow;
 import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.handler.CoroutineLRZContext;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Author:  liurongzhi
  * CreateTime:  2023/1/29
  * Description: 多个事件流集合
+ * <p>
+ * 重构 2023/5/21
+ * 1.事件集的出现目的是什么
+ * 	事件集是为了管理多个事件流的执行情况，观察多个事件流是否完成，和完成情况
+ * 2.为什么事件集在修改了多个版本后，仍然达不到预期
+ * 	我只想到了多个事件流并发的情况，忽视了事件流之间的关系？无法兼容多种场景，而事件流之间的相互关系，影响到了事件集对什么时候是完成，什么时候是错误的定义出现了问题
+ * 3.事件集的已知使用场景，分析这个问题需要从事件流之间的关系入手，事件流之间的关系分以下两种
+ *
+ * 			-->  success（1）--> onSubscribe ->		    ｜
+ * 	ob1----|				                    1 or 0	｜
+ * 			--> execption（0--> onError    -->		    ｜
+ *                                                      ｜
+ * 									                    ｜	        ---> onSubscribe
+ * 			-->  success（1）  --> onSubscribe ->		｜	        ｜
+ * ob2----|				                         1 or 0	｜---set--->
+ * 			--> execption（0） --> onError    -->		｜	        ｜
+ * 									                    ｜	         ---> onError
+ * 									                    ｜
+ * 			-->  success（1）  --> onSubscribe ->		｜
+ * ob3----|				                         1 or 0	｜
+ * 			--> execption（0） --> onError    -->		｜
+ *
+ * 		1.and，多个事件流均完成且无错误，则事件集执行完毕，如果某一个事件流出现错误，则事件集执行失败，未完成的流需要关闭，事件集只执行error
+ * 			每个流执行的结果都有成功和失败 也就是 1或0，当所有事件都是1，则set结果是1，即 1&1&1=1，有一个执行失败，则set是0即 0&1&1=0
+ * 			公式 集的结果 y = x1&x2&x3
+ *
+ * 			举例：更新用户信息需要request两个接口，一个返回用户基本信息，一个返回用户vip信息，则两个流执行结果都是1.则集的结果是1，否则，是0
+ *
+ *
+ * 		2.or，多个事件流的执行只要有一个成功，则集的执行就算成功，即 集的结果 y = x1|x2|x3,只有x都是0，y才是0
+ * 			举例：在获取不同地址的相同资源，只要有一个商返回，则本次的请求就算成功
+ * 		</p>
  */
-public class ObservableSet extends Observable<Boolean> {
+public class ObservableSet extends Observable<Integer> {
     Observable<?>[] observables;
+    //完成多少个
     AtomicInteger count = new AtomicInteger();
-    boolean closeOnError = false;
-    volatile long timeOut;
-    private volatile boolean isTimeOut = false;
+    //成功多少个
+    AtomicInteger successNum = new AtomicInteger();
+    //执行模式，1 and，2 or
+    private int setMode = 1;
+    private volatile boolean closeOnComplete = true;
 
     protected ObservableSet() {
     }
@@ -24,115 +61,58 @@ public class ObservableSet extends Observable<Boolean> {
         this.observables = observables;
     }
 
-    public static ObservableSet with(Observable<?>... observable) {
+    public static @NotNull
+    ObservableSet CreateAnd(Observable<?>... observable) {
+        ObservableSet set = create(observable);
+        set.setMode = 1;
+        return set;
+    }
+
+    public static @NotNull
+    ObservableSet CreateOr(Observable<?>... observable) {
+        ObservableSet set = create(observable);
+        set.setMode = 2;
+        return set;
+    }
+
+    public static @NotNull
+    ObservableSet CreateOr(boolean closeOnComplete, Observable<?>... observable) {
+        ObservableSet set = create(observable);
+        set.setMode = 2;
+        set.closeOnComplete = closeOnComplete;
+        return set;
+    }
+
+    private static @NotNull
+    ObservableSet create(Observable<?>... observable) {
         ObservableSet set = new ObservableSet(observable);
         if (set.observables != null && set.observables.length > 0) {
             for (Observable<?> ob : set.observables) {
-                ob.subscribe(o -> set.checkResult());
+                ob.subscribe(o -> set.onComplete(null, ob));
             }
         }
         return set;
     }
 
-    public static ObservableSet with(boolean closeOnError, Observable<?>... observable) {
-        ObservableSet set = new ObservableSet(observable);
-        set.closeOnError = closeOnError;
-        if (set.observables != null && set.observables.length > 0) {
-            for (Observable<?> ob : set.observables) {
-                ob.subscribe(o -> set.checkResult());
+    //标记是否有错误发生
+    private synchronized void onComplete(Throwable throwable, Observable<?> observable) {
+        count.incrementAndGet();
+        if (throwable == null) successNum.incrementAndGet();
+        if (setMode == 1) {
+            if (observables != null && count.get() >= observables.length) {
+                //都完成了,且没有发生错误,本轮success个数
+                onSubscribe(successNum.get());
             }
-        }
-        return set;
-    }
-
-    private Observable<Boolean> timeObservable;
-    private Dispatcher timeDispatcher;
-    private boolean cancelOnTimeOut = false;
-
-    public synchronized ObservableSet timeOut(long timeOut, Observer<Void> observer) {
-        return timeOut(timeOut, Dispatcher.MAIN, observer);
-    }
-
-    public synchronized ObservableSet cancelOnTimeOut(boolean cancelOnTimeOut) {
-        this.cancelOnTimeOut = cancelOnTimeOut;
-        return this;
-    }
-
-    public Observable<Boolean> getTimeObservable() {
-        ObservableSet set = this;
-        while (set != null) {
-            if (set.timeObservable != null) return set.timeObservable;
-            set = (ObservableSet) set.preObservable;
-        }
-        return null;
-    }
-
-    public Dispatcher getTimeDispatcher() {
-        ObservableSet set = this;
-        while (set != null) {
-            if (set.timeDispatcher != null) return set.timeDispatcher;
-            set = (ObservableSet) set.preObservable;
-        }
-        return null;
-    }
-
-    public long getTimeOut() {
-        ObservableSet set = this;
-        while (set != null) {
-            if (set.timeOut != 0) return set.timeOut;
-            set = (ObservableSet) set.preObservable;
-        }
-        return 0;
-    }
-
-    /**
-     * 是否已经超时
-     *
-     * @return true 超时
-     */
-    public synchronized boolean isTimeOut() {
-        return isTimeOut;
-    }
-
-    /**
-     * 设置是否已经超时，内部使用
-     */
-    private synchronized void timeOutAllReady() {
-        this.isTimeOut = true;
-    }
-
-    /**
-     * 从真正执行开始算超时
-     */
-    public synchronized ObservableSet timeOut(long timeOut, Dispatcher dispatcher, Observer<Void> observer) {
-        if (timeOut == 0 || dispatcher == null) return this;
-        this.timeOut = timeOut;
-        this.timeDispatcher = dispatcher;
-        timeObservable = CoroutineLRZContext.Create(new Task<Boolean>() {
-            @Override
-            public Boolean submit() {
-                System.out.println("---" + count.get() + "   " + observables.length);
-                return observables != null && count.get() < observables.length;
-            }
-        }).subscribe(aBoolean -> {
-            if (Boolean.TRUE.equals(aBoolean)) {
-                timeOutAllReady();
-                //超时
-                if (cancelOnTimeOut) {
-                    cancel();
+        } else if (setMode == 2) {
+            if (observables != null && count.get() == 1) {
+                //在or模式下 只要有一个成功了，则代表本次事件集成功
+                onSubscribe(successNum.get());
+                //完成后，是否需要关闭其他流
+                if (closeOnComplete) {
+                    for (Observable<?> ob : observables) {
+                        if (ob != observable) ob.cancel();
+                    }
                 }
-                if (observer != null) observer.onSubscribe(null);
-            }
-        });
-        return this;
-    }
-
-    private synchronized void checkResult() {
-        if (!isTimeOut() && observables != null && count.incrementAndGet() >= observables.length) {
-            if (result != null) {
-                Observable<?> timeObservable = getTimeObservable();
-                if (timeObservable != null) timeObservable.cancel();
-                onSubscribe(true);
             }
         }
     }
@@ -140,12 +120,13 @@ public class ObservableSet extends Observable<Boolean> {
     /**
      * 复写父类，不处理线程回调，只接收多任务结束事件
      *
-     * @param aBoolean
+     * @param num
      */
     @Override
-    protected void onSubscribe(Boolean aBoolean) {
-        if (observables == null || count.get() >= observables.length) {
-            super.onSubscribe(aBoolean);
+    protected void onSubscribe(Integer num) {
+        //拦截task的调用，这里只允许内部手动调用
+        if (num >= 0) {
+            super.onSubscribe(num);
         }
     }
 
@@ -155,11 +136,11 @@ public class ObservableSet extends Observable<Boolean> {
         if (pre != null) {
             return pre.getTask();
         } else if (task == null) {
-            task = new Task<Boolean>() {
+            task = new Task<Integer>() {
                 @Override
-                public Boolean submit() {
+                public Integer submit() {
                     doObservables();
-                    return true;
+                    return -1;
                 }
             };
             task.setObservable(this);
@@ -180,7 +161,7 @@ public class ObservableSet extends Observable<Boolean> {
     }
 
     @Override
-    public synchronized <F> Observable<F> map(Function<Boolean, F> function) {
+    public synchronized <F> Observable<F> map(Function<Integer, F> function) {
         return super.map(function);
     }
 
@@ -190,93 +171,54 @@ public class ObservableSet extends Observable<Boolean> {
      * @return
      */
     @Override
-    public synchronized Observable<Boolean> execute() {
+    public synchronized Observable<Integer> execute() {
         Dispatcher dispatcher = getTaskDispatch();
         if (dispatcher == null) {
             thread(Dispatcher.MAIN);
         }
-        Observable<?> timeObservable = getTimeObservable();
-        if (timeObservable != null) {
-            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut());
-        }
         return super.execute();
     }
 
-    @Override
-    public synchronized Observable<Boolean> execute(Dispatcher dispatcher) {
-        Observable<?> timeObservable = getTimeObservable();
-        if (timeObservable != null) {
-            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut());
-        }
-        return super.execute(dispatcher);
-    }
-
-    @Override
-    public synchronized Observable<Boolean> executeDelay(Dispatcher dispatcher, long delay) {
-        Observable<?> timeObservable = getTimeObservable();
-        if (timeObservable != null) {
-            timeObservable.executeDelay(getTimeDispatcher(), getTimeOut() + delay);
-        }
-        return super.executeDelay(dispatcher, delay);
-    }
-
-    @Override
-    public synchronized Observable<Boolean> executeTime(Dispatcher dispatcher, long interval) {
-        return super.executeTime(dispatcher, interval);
-    }
-
     private void proxyError(Observable<?> ob) {
-        if (getError() != null) {
-            IError<?> oldError = ob.getError();
-            Dispatcher dispatcher = ob.getErrorDispatcher();
-            if (dispatcher == null) dispatcher = ob.getDispatcher();
-            ob.error(dispatcher, new InnerError(oldError, dispatcher, this));
-        }
+        IError<?> oldError = ob.getError();
+        Dispatcher dispatcher = ob.getErrorDispatcher();
+        if (dispatcher == null) dispatcher = ob.getDispatcher();
+        ob.error(dispatcher, new InnerError(ob, oldError, dispatcher, this));
     }
 
     static class InnerError implements IError<Throwable> {
         //原来的error
-        private final IError error;
+        private final IError<?> error;
         private final Dispatcher oldDispatch;
         private final ObservableSet observableSet;
+        final Observable<?> ob;
 
-        InnerError(IError error, Dispatcher oldDispatch, ObservableSet observableSet) {
+        InnerError(Observable<?> ob, IError<?> error, Dispatcher oldDispatch, ObservableSet observableSet) {
             this.error = error;
             this.oldDispatch = oldDispatch;
             this.observableSet = observableSet;
+            this.ob = ob;
         }
 
         @Override
         public void onError(Throwable throwable) {
             IError error = this.error;
-            if (observableSet.getErrorDispatcher() == null) {
-                observableSet.errorDispatcher = observableSet.dispatcher;
-            }
-            synchronized (observableSet) {
-                if (!observableSet.isTimeOut()
-                        && observableSet.observables != null
-                        && observableSet.count.incrementAndGet() >= observableSet.observables.length){
-                    if (observableSet.timeObservable != null) observableSet.timeObservable.cancel();
-                }
-            }
+            //先把流的错误发送出去
             if (error != null) {
                 if (oldDispatch != null) {
                     CoroutineLRZContext.INSTANCE.execute(oldDispatch, () -> {
                         error.onError(throwable);
-                        observableSet.onError(throwable);
                     });
                 } else {
                     error.onError(throwable);
-                    observableSet.onError(throwable);
                 }
+            } else {
+                // 如果流没有处理error事件，则交给set处理
+                observableSet.onError(new CoroutineFlowException("stream has an error,and did not deal it self", throwable));
             }
+            //再把集的错误发送出去
+            observableSet.onComplete(throwable, ob);
         }
-    }
-
-    @Override
-    protected void onError(Throwable e) {
-        super.onError(e);
-        if (closeOnError) cancel();
     }
 
     @Override
@@ -286,10 +228,6 @@ public class ObservableSet extends Observable<Boolean> {
                 ob.cancel();
             }
             observables = null;
-        }
-        if (timeObservable != null) {
-            timeObservable.cancel();
-            timeObservable = null;
         }
         super.cancel();
     }
