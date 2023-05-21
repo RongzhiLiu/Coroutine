@@ -125,6 +125,10 @@ public class ObservableSet extends Observable<Integer> {
     protected void onSubscribe(Integer num) {
         //拦截task的调用，这里只允许内部手动调用
         if (num >= 0) {
+            if (dispatcher == null) {
+                dispatcher = getDispatcher();
+                if (dispatcher == null) dispatcher = getTaskDispatch();
+            }
             super.onSubscribe(num);
         }
     }

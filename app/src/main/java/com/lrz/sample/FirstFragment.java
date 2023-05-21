@@ -162,14 +162,15 @@ public class FirstFragment extends Fragment {
             public Void submit() {
                 return null;
             }
-        }).delay(1000).thread(Dispatcher.MAIN).subscribe(unused -> {
+        }).delay(1000).thread(Dispatcher.IO).subscribe(unused -> {
             Log.i("---定时任务", Thread.currentThread().getName());
         });
-        ObservableSet.CreateOr(false,obSet, time).subscribe(Dispatcher.BACKGROUND, aBoolean -> {
-            Log.i("---set2-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
-        }).error(error -> {
-            Log.i("---set2-error", Thread.currentThread().getName(), error);
-        }).execute();
+        ObservableSet.CreateOr(false, obSet, time)
+                .subscribe(aBoolean -> {
+                    Log.i("---set2-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+                }).error(error -> {
+                    Log.i("---set2-error", Thread.currentThread().getName(), error);
+                }).execute();
 
     }
 
