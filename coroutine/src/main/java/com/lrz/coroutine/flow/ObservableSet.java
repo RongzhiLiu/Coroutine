@@ -120,7 +120,6 @@ public class ObservableSet extends Observable<Integer> {
     /**
      * 复写父类，不处理线程回调，只接收多任务结束事件
      *
-     * @param num
      */
     @Override
     protected void onSubscribe(Integer num) {
@@ -168,7 +167,6 @@ public class ObservableSet extends Observable<Integer> {
     /**
      * 当前线程，立即执行所有任务
      *
-     * @return
      */
     @Override
     public synchronized Observable<Integer> execute() {
