@@ -23,7 +23,7 @@ public abstract class RequestBuilder<B> extends Task<B> {
     private Map<String, String> params;
     //提交json
     private String json;
-    //0get,1post 2post_json
+    //0get,1post
     private int method;
 
     public RequestBuilder(String url) {

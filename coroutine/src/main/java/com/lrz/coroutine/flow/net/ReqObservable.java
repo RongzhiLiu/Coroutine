@@ -66,10 +66,6 @@ public class ReqObservable<T> extends Observable<T> {
         if (getTask() instanceof RequestBuilder) {
             ((RequestBuilder<?>) getTask()).method(0);
         }
-        // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
-        if (taskDispatcher == null) {
-            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
-        }
         return execute(taskDispatcher);
     }
 
@@ -83,9 +79,6 @@ public class ReqObservable<T> extends Observable<T> {
         if (getTask() instanceof RequestBuilder) {
             ((RequestBuilder<?>) getTask()).method(1);
         }
-        if (taskDispatcher == null) {
-            taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
-        }
         return execute(taskDispatcher);
     }
 
@@ -98,7 +91,16 @@ public class ReqObservable<T> extends Observable<T> {
 
     @Override
     public synchronized ReqObservable<T> execute(Dispatcher dispatcher) {
+        return (ReqObservable<T>) super.execute(dispatcher);
+    }
+
+    @Override
+    public synchronized ReqObservable<T> execute() {
         if (getTask() instanceof RequestBuilder) {
+            // 如果有订阅者，则使用io线程，如果没有，则使用后台线程，表示是非紧急的任务
+            if (taskDispatcher == null) {
+                taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
+            }
             if (getError() == null) {
                 error(new DefReqError());
             }
@@ -108,19 +110,6 @@ public class ReqObservable<T> extends Observable<T> {
                     RequestBuilder.REQUEST_BUILDERS.add((RequestBuilder<?>) getTask());
                     return this;
                 }
-            }
-        }
-        return (ReqObservable<T>) super.execute(dispatcher);
-    }
-
-    @Override
-    public synchronized ReqObservable<T> execute() {
-        if (getTask() instanceof RequestBuilder) {
-            if (taskDispatcher == null) {
-                taskDispatcher = hasSubscriber() ? Dispatcher.IO : Dispatcher.BACKGROUND;
-            }
-            if (getError() == null) {
-                error(new DefReqError());
             }
         }
         return (ReqObservable<T>) super.execute();

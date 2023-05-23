@@ -226,20 +226,22 @@ public class CommonRequest {
                     throw new RequestException("response.body stream read error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_IO);
                 }
                 // 尝试预解析 code 和msg 字段
-                if (codeStr != null && msgStr != null) {
-                    try {
-                        JSONObject jo = new JSONObject(json);
-                        int code = jo.getInt(codeStr);
-                        if (code != 0) {
-                            String msg = jo.getString(msgStr);
-                            CodeInterceptor interceptor = codeInterceptors.get(code);
-                            if (interceptor != null) {
-                                interceptor.onInterceptor(json, msg);
+                if (dClass != String.class && dClass != null) {
+                    if (codeStr != null && msgStr != null) {
+                        try {
+                            JSONObject jo = new JSONObject(json);
+                            int code = jo.getInt(codeStr);
+                            if (code != 0) {
+                                String msg = jo.getString(msgStr);
+                                CodeInterceptor interceptor = codeInterceptors.get(code);
+                                if (interceptor != null) {
+                                    interceptor.onInterceptor(json, msg);
+                                }
+                                throw new RequestException(msg, code);
                             }
-                            throw new RequestException(msg, code);
+                        } catch (JSONException e) {
+                            throw new RequestException("code or msg in json decode error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_JSON_FORMAT);
                         }
-                    } catch (JSONException e) {
-                        throw new RequestException("code or msg in json decode error! or look at Caused by ...", e, ResponseCode.CODE_ERROR_JSON_FORMAT);
                     }
                 }
                 if (dClass == String.class || dClass == null) {

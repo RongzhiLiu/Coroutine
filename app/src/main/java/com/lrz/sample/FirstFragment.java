@@ -15,6 +15,7 @@ import com.lrz.coroutine.Dispatcher;
 import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Emitter;
+import com.lrz.coroutine.flow.Function;
 import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.ObservableSet;
 import com.lrz.coroutine.flow.Observer;
@@ -191,31 +192,44 @@ public class FirstFragment extends Fragment {
 
     int count = 0;
     long j = 0;
+
     public void steam() {
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1; i++) {
 
-            Observable<String> ob = start();
-            j = ob.getInterval()+ob.getDelay()+ob.hashCode();
+            Observable<Integer> ob = start();
+            CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+                @Override
+                public void run() {
+                    ob.subscribe(new Observer<Integer>() {
+                        @Override
+                        public void onSubscribe(Integer integer) {
+                            LLog.e("--------", "subscribe" + Thread.currentThread().getName() + integer);
+                        }
+                    }).error(error -> {
+                        LLog.e("--------", "error", error);
+                    });
+                }
+            }, 2000);
 
-            ob.subscribe(Dispatcher.MAIN, s -> {
-                count++;
-            });
         }
-
-        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getActivity(), count + "", Toast.LENGTH_SHORT).show();
-            }
-        }, 1000);
     }
 
-    public Observable<String> start() {
-        return CoroutineLRZContext.Create(new Task<String>() {
+    public Observable<Integer> start() {
+        Observable o =  CoroutineLRZContext.Create(new Task<String>() {
             @Override
             public String submit() {
-                return "";
+                LLog.e("--------", "start");
+
+                return "-";
             }
-        }).thread(Dispatcher.IO).execute();
+        }).subscribe(new Observer<String>() {
+            @Override
+            public void onSubscribe(String s) {
+                int i = 1/0;
+                LLog.e("--------", "onSubscribe");
+            }
+        }).thread(Dispatcher.IO);
+
+        return ObservableSet.CreateAnd(o).execute();
     }
 }

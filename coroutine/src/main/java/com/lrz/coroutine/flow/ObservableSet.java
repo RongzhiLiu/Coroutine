@@ -5,6 +5,7 @@ import com.lrz.coroutine.handler.CoroutineLRZContext;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -55,10 +56,12 @@ public class ObservableSet extends Observable<Integer> {
     private volatile boolean closeOnComplete = true;
 
     protected ObservableSet() {
+        super();
     }
 
     ObservableSet(Observable<?>[] observables) {
         this.observables = observables;
+        troubles = new LinkedBlockingDeque<>();
     }
 
     public static @NotNull
