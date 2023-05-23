@@ -5,12 +5,14 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.lrz.coroutine.Dispatcher;
+import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Emitter;
 import com.lrz.coroutine.flow.Observable;
@@ -75,7 +77,8 @@ public class FirstFragment extends Fragment {
         binding.buttonMain.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                streamSet();
+//                streamSet();
+                steam();
             }
         });
 
@@ -131,16 +134,21 @@ public class FirstFragment extends Fragment {
         Observable<String> observable = CoroutineLRZContext.Create(new Task<String>() {
             @Override
             public String submit() {
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 return "";
             }
         }).subscribe(Dispatcher.IO, str -> {
             Log.i("---任务1-io-subscribe", Thread.currentThread().getName());
         }).error(error -> Log.i("---任务1-error", Thread.currentThread().getName(), error)).thread(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+
+        Observable<String> observable2 = CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                return "";
+            }
+        }).subscribe(Dispatcher.IO, str -> {
+            Log.i("---任务2-io-subscribe", Thread.currentThread().getName());
+        }).error(error -> Log.i("---任务2-error", Thread.currentThread().getName(), error)).thread(Dispatcher.BACKGROUND);//开始执行任务，并指定线程
+
 
         ReqObservable<String> observable3 = CommonRequest.Create(new RequestBuilder<String>() {
                     {
@@ -151,22 +159,23 @@ public class FirstFragment extends Fragment {
                 }).error(error -> Log.i("---任务request-error", Thread.currentThread().getName()))
                 .method(Method.GET);
 
-        Observable<Integer> obSet = ObservableSet.CreateAnd(observable, observable3)
-                .subscribe(Dispatcher.BACKGROUND, aBoolean -> {
-                    Log.i("---set-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
+        Observable<Integer> obSet = ObservableSet.CreateAnd(observable, observable2, observable3)
+                .subscribe(aBoolean -> {
+                    Log.i("---set1-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
                 }).error(error -> {
-                    Log.i("---set-error", Thread.currentThread().getName(), error);
+                    Log.i("---set1-error", Thread.currentThread().getName(), error);
                 });
         Observable<?> time = CoroutineLRZContext.Create(new Task<Void>() {
             @Override
             public Void submit() {
                 return null;
             }
-        }).delay(1000).thread(Dispatcher.IO).subscribe(unused -> {
+        }).delay(5000).thread(Dispatcher.MAIN).subscribe(unused -> {
             Log.i("---定时任务", Thread.currentThread().getName());
         });
         ObservableSet.CreateOr(false, obSet, time)
                 .subscribe(aBoolean -> {
+                    time.cancel();
                     Log.i("---set2-subscribe", Thread.currentThread().getName() + "   " + aBoolean);
                 }).error(error -> {
                     Log.i("---set2-error", Thread.currentThread().getName(), error);
@@ -180,16 +189,33 @@ public class FirstFragment extends Fragment {
         binding = null;
     }
 
+    int count = 0;
+    long j = 0;
     public void steam() {
-        Observable<String> observable1 = CoroutineLRZContext.Create(new Emitter<String>() {
-        }).subscribe(Dispatcher.MAIN, s -> {
-            // 展示dialog1
-        });
+        for (int i = 0; i < 100; i++) {
 
-        Observable<Integer> observable2 = CoroutineLRZContext.Create(new Emitter<Integer>() {
-        }).subscribe(Dispatcher.MAIN, i -> {
-            // 展示dialog2
-        });
+            Observable<String> ob = start();
+            j = ob.getInterval()+ob.getDelay()+ob.hashCode();
 
+            ob.subscribe(Dispatcher.MAIN, s -> {
+                count++;
+            });
+        }
+
+        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getActivity(), count + "", Toast.LENGTH_SHORT).show();
+            }
+        }, 1000);
+    }
+
+    public Observable<String> start() {
+        return CoroutineLRZContext.Create(new Task<String>() {
+            @Override
+            public String submit() {
+                return "";
+            }
+        }).thread(Dispatcher.IO).execute();
     }
 }

@@ -170,7 +170,7 @@ public class ReqObservable<T> extends Observable<T> {
         Observable<?> pre = this;
         Observable<?> next = getNextObservable();
         while (pre != null || next != null) {
-            if ((pre != null && pre.getResult() != null) || (next != null && next.getResult() != null)) {
+            if ((pre != null && pre.getObserver() != null) || (next != null && next.getObserver() != null)) {
                 return true;
             }
             if (pre != null) {

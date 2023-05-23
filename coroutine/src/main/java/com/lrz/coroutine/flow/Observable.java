@@ -7,6 +7,7 @@ import com.lrz.coroutine.handler.Job;
 
 import java.io.Closeable;
 import java.util.Arrays;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Author:  liurongzhi
@@ -19,7 +20,7 @@ public class Observable<T> implements Closeable {
     // 执行者线程
     protected Dispatcher taskDispatcher;
     protected volatile Task<T> task;
-    protected Observer<T> result;
+    protected Observer<T> observer;
     protected Function<T, ?> map;
     private IError<Throwable> error;
     // 错误回调线程
@@ -31,6 +32,8 @@ public class Observable<T> implements Closeable {
     protected long interval = -1;
     // 任务是否已经关闭
     private volatile boolean isCancel = false;
+
+    LinkedBlockingDeque<T> results = new LinkedBlockingDeque<>();
     /**
      * 双向链表结构，用于管理责任链中的 Observable，当使用map 函数时，会生成链表
      */
@@ -47,8 +50,8 @@ public class Observable<T> implements Closeable {
     protected Observable() {
     }
 
-    public Observer<T> getResult() {
-        return result;
+    public Observer<T> getObserver() {
+        return observer;
     }
 
     public Observable<?> getPreObservable() {
@@ -77,11 +80,11 @@ public class Observable<T> implements Closeable {
      * @return 任务描述
      */
     public synchronized Observable<T> subscribe(Dispatcher dispatcher, Observer<T> result) {
-        if (this.result != null) {
+        if (this.observer != null) {
             return map().subscribe(dispatcher, result);
         } else {
             this.dispatcher = dispatcher;
-            this.result = result;
+            this.observer = result;
             return this;
         }
     }
@@ -358,7 +361,7 @@ public class Observable<T> implements Closeable {
     }
 
     protected void onError(Throwable e) {
-        if (isCancel) return;
+        if (isCancel()) return;
         IError<Throwable> error = getError();
         Task<?> task = getTask();
         if (task != null) {
@@ -391,46 +394,32 @@ public class Observable<T> implements Closeable {
      * @param t 结果
      */
     protected void onSubscribe(T t) {
-        Observer<T> result = this.result;
-        if (result != null) {
-            if (dispatcher == null) {
-                result.onSubscribe(t);
-                Observable observable = nextObservable;
-                if (observable != null) {
-                    Function<T, ?> function = map;
-                    if (function != null) {
-                        observable.onSubscribe(map.apply(t));
-                    } else {
-                        observable.onSubscribe(t);
-                    }
-                }
-            } else {
-                CoroutineLRZContext.INSTANCE.execute(dispatcher, () -> {
-                    try {
-                        result.onSubscribe(t);
-                        Observable observable = nextObservable;
-                        if (observable != null) {
-                            Function<T, ?> function = map;
-                            if (function != null) {
-                                observable.onSubscribe(map.apply(t));
-                            } else {
-                                observable.onSubscribe(t);
-                            }
-                        }
-                    } catch (Exception e) {
-                        dispatchError(e);
-                    }
-                });
-            }
+        if (dispatcher == null) {
+            dispatchSubscribe(t);
         } else {
-            Observable observable = nextObservable;
-            if (observable != null) {
-                Function<T, ?> function = map;
-                if (function != null) {
-                    observable.onSubscribe(map.apply(t));
-                } else {
-                    observable.onSubscribe(t);
+            CoroutineLRZContext.INSTANCE.execute(dispatcher, () -> {
+                try {
+                    dispatchSubscribe(t);
+                } catch (Exception e) {
+                    dispatchError(e);
                 }
+            });
+        }
+    }
+
+    private void dispatchSubscribe(T t) {
+        if (isCancel()) return;
+        Observer<T> observer = this.observer;
+        if (observer != null) {
+            observer.onSubscribe(t);
+        }
+        Observable observable = nextObservable;
+        if (observable != null) {
+            Function<T, ?> function = map;
+            if (function != null) {
+                observable.onSubscribe(map.apply(t));
+            } else {
+                observable.onSubscribe(t);
             }
         }
     }
@@ -451,12 +440,15 @@ public class Observable<T> implements Closeable {
      * 思考，如果当前observable 处在任务流中间呢，应该如果处置
      */
     public synchronized void cancel() {
-        if (isCancel) return;
+        if (isCancel()) return;
         if (job != null) {
             job.cancel();
             job = null;
             LLog.d("COROUTINE_OBS", "observable stream close");
         }
+
+        results.clear();
+        results = null;
         //向上递归取消
         Observable<?> observable = preObservable;
         if (observable != null) {
@@ -476,7 +468,7 @@ public class Observable<T> implements Closeable {
         task = null;
         map = null;
         error = null;
-        result = null;
+        observer = null;
         isCancel = true;
     }
 
