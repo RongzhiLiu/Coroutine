@@ -194,39 +194,34 @@ public class FirstFragment extends Fragment {
     long j = 0;
 
     public void steam() {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 1000; i++) {
 
             Observable<Integer> ob = start();
-            CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+            ob.subscribe(Dispatcher.MAIN, new Observer<Integer>() {
                 @Override
-                public void run() {
-                    ob.subscribe(new Observer<Integer>() {
-                        @Override
-                        public void onSubscribe(Integer integer) {
-                            LLog.e("--------", "subscribe" + Thread.currentThread().getName() + integer);
-                        }
-                    }).error(error -> {
-                        LLog.e("--------", "error", error);
-                    });
+                public void onSubscribe(Integer integer) {
+                    j++;
                 }
-            }, 2000);
+            });
 
         }
+        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(getActivity(), "次数=" + j, Toast.LENGTH_SHORT).show();
+            }
+        }, 5000);
     }
 
     public Observable<Integer> start() {
-        Observable o =  CoroutineLRZContext.Create(new Task<String>() {
+        Observable o = CoroutineLRZContext.Create(new Task<String>() {
             @Override
             public String submit() {
-                LLog.e("--------", "start");
-
                 return "-";
             }
         }).subscribe(new Observer<String>() {
             @Override
             public void onSubscribe(String s) {
-                int i = 1/0;
-                LLog.e("--------", "onSubscribe");
             }
         }).thread(Dispatcher.IO);
 

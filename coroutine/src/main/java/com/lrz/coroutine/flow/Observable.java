@@ -103,6 +103,7 @@ public class Observable<T> implements Closeable {
                     Observable finalPreObservable = preObservable;
                     CoroutineLRZContext.INSTANCE.execute(dis, () -> {
                         for (Object o : rs) {
+                            if (isCancel()) break;
                             try {
                                 if (finalPreObservable != this) {
                                     finalPreObservable.dispatchNext(o);
@@ -182,6 +183,7 @@ public class Observable<T> implements Closeable {
                     if (dispatcher == null) dispatcher = getTaskDispatch();
                     if (dispatcher != null) {
                         CoroutineLRZContext.INSTANCE.execute(dispatcher, () -> {
+                            if (isCancel()) return;
                             error.onError(throwable);
                         });
                     }
