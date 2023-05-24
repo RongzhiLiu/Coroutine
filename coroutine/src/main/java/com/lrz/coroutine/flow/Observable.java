@@ -497,11 +497,9 @@ public class Observable<T> implements Closeable {
         }
         if (results != null) {
             results.clear();
-            results = null;
         }
         if (troubles != null) {
             troubles.clear();
-            troubles = null;
         }
         //向上递归取消
         Observable<?> observable = preObservable;
