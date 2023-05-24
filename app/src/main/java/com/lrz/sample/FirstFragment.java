@@ -194,36 +194,48 @@ public class FirstFragment extends Fragment {
     long j = 0;
 
     public void steam() {
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 1; i++) {
 
             Observable<Integer> ob = start();
-            ob.subscribe(Dispatcher.MAIN, new Observer<Integer>() {
+            CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
                 @Override
-                public void onSubscribe(Integer integer) {
-                    j++;
+                public void run() {
+                    ob.subscribe(Dispatcher.MAIN, new Observer<Integer>() {
+                        @Override
+                        public void onSubscribe(Integer integer) {
+                            LLog.w("2------",integer+"");
+                        }
+                    });
                 }
-            });
+            }, 2000);
 
         }
-        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(getActivity(), "次数=" + j, Toast.LENGTH_SHORT).show();
-            }
-        }, 5000);
+
     }
 
     public Observable<Integer> start() {
-        Observable o = CoroutineLRZContext.Create(new Task<String>() {
+        Observable<Void> o = CoroutineLRZContext.Create(new Task<Void>() {
             @Override
-            public String submit() {
-                return "-";
+            public Void submit() {
+                return null;
             }
-        }).subscribe(new Observer<String>() {
+        }).subscribe(new Observer<Void>() {
             @Override
-            public void onSubscribe(String s) {
+            public void onSubscribe(Void s) {
             }
         }).thread(Dispatcher.IO);
+
+        CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
+            @Override
+            public void run() {
+                o.subscribe(Dispatcher.MAIN, new Observer<Void>() {
+                    @Override
+                    public void onSubscribe(Void integer) {
+                        LLog.w("1------",integer+"");
+                    }
+                });
+            }
+        }, 1000);
 
         return ObservableSet.CreateAnd(o).execute();
     }
