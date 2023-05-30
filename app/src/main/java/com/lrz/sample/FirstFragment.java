@@ -1,6 +1,7 @@
 package com.lrz.sample;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,6 +17,7 @@ import com.lrz.coroutine.LLog;
 import com.lrz.coroutine.Priority;
 import com.lrz.coroutine.flow.Emitter;
 import com.lrz.coroutine.flow.Function;
+import com.lrz.coroutine.flow.IError;
 import com.lrz.coroutine.flow.Observable;
 import com.lrz.coroutine.flow.ObservableSet;
 import com.lrz.coroutine.flow.Observer;
@@ -190,53 +192,33 @@ public class FirstFragment extends Fragment {
         binding = null;
     }
 
-    int count = 0;
-    long j = 0;
-
     public void steam() {
-        for (int i = 0; i < 1; i++) {
-
-            Observable<Integer> ob = start();
-            CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
-                @Override
-                public void run() {
-                    ob.subscribe(Dispatcher.MAIN, new Observer<Integer>() {
-                        @Override
-                        public void onSubscribe(Integer integer) {
-                            LLog.w("2------",integer+"");
-                        }
-                    });
-                }
-            }, 2000);
-
-        }
-
-    }
-
-    public Observable<Integer> start() {
-        Observable<Void> o = CoroutineLRZContext.Create(new Task<Void>() {
-            @Override
-            public Void submit() {
-                return null;
-            }
-        }).subscribe(new Observer<Void>() {
-            @Override
-            public void onSubscribe(Void s) {
-            }
-        }).thread(Dispatcher.IO);
-
+        Observable<Integer> observable = start();
         CoroutineLRZContext.ExecuteDelay(Dispatcher.MAIN, new Runnable() {
             @Override
             public void run() {
-                o.subscribe(Dispatcher.MAIN, new Observer<Void>() {
+                observable.subscribe(new Observer<Integer>() {
                     @Override
-                    public void onSubscribe(Void integer) {
-                        LLog.w("1------",integer+"");
+                    public void onSubscribe(Integer i) {
+                        System.out.println("-------------steam="+i);
                     }
                 });
             }
-        }, 1000);
+        },5000);
+    }
 
-        return ObservableSet.CreateAnd(o).execute();
+    int i = 0;
+    public Observable<Integer> start() {
+        return CoroutineLRZContext.Create(new Task<Integer>() {
+            @Override
+            public Integer submit() {
+                return i++;
+            }
+        }).subscribe(new Observer<Integer>() {
+            @Override
+            public void onSubscribe(Integer s) {
+                System.out.println("--------start="+s);
+            }
+        }).thread(Dispatcher.MAIN).interval(1000).execute();
     }
 }

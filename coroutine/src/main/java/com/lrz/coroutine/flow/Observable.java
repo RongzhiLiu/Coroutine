@@ -418,17 +418,20 @@ public class Observable<T> implements Closeable {
             if (dispatcher == null) {
                 error.onError(e);
                 LinkedBlockingDeque<Throwable> troubles;
-                if (!isCancel() && (troubles = getTroubles()) != null) troubles.offerLast(e);
+                if (!isCancel() && getInterval() == 0 && (troubles = getTroubles()) != null)
+                    troubles.offerLast(e);
             } else {
                 CoroutineLRZContext.INSTANCE.execute(dispatcher, () -> {
                     error.onError(e);
                     LinkedBlockingDeque<Throwable> troubles;
-                    if (!isCancel() && (troubles = getTroubles()) != null) troubles.offerLast(e);
+                    if (!isCancel() && getInterval() == 0 && (troubles = getTroubles()) != null)
+                        troubles.offerLast(e);
                 });
             }
         } else {
             LinkedBlockingDeque<Throwable> troubles;
-            if (!isCancel() && (troubles = getTroubles()) != null) troubles.offerLast(e);
+            if (!isCancel() && getInterval() == 0 && (troubles = getTroubles()) != null)
+                troubles.offerLast(e);
             LLog.e("COROUTINE_OBS", "coroutine inner error,look at:", e);
         }
     }
@@ -442,7 +445,7 @@ public class Observable<T> implements Closeable {
         if (dispatcher == null) {
             dispatchSubscribe(t);
             LinkedBlockingDeque<Consequence<T>> deque;
-            if (!isCancel() && (deque = getResults()) != null) {
+            if (!isCancel() && getInterval() == 0 && (deque = getResults()) != null) {
                 deque.offerLast(new Consequence<>(t));
             }
         } else {
@@ -450,7 +453,7 @@ public class Observable<T> implements Closeable {
                 try {
                     dispatchSubscribe(t);
                     LinkedBlockingDeque<Consequence<T>> deque;
-                    if (!isCancel() && (deque = getResults()) != null) {
+                    if (!isCancel() && getInterval() == 0 && (deque = getResults()) != null) {
                         deque.offerLast(new Consequence<>(t));
                     }
                 } catch (Exception e) {
