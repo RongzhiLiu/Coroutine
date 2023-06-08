@@ -457,6 +457,11 @@ public class Observable<T> implements Closeable {
      * @param t 结果
      */
     protected void onSubscribe(T t) {
+        Dispatcher dispatcher = this.dispatcher;
+        //如果是第一个观察者，且没有指定线程
+        if (preObservable == null && dispatcher == null) {
+            dispatcher = getTaskDispatch();
+        }
         if (dispatcher == null) {
             dispatchSubscribe(t);
             LinkedBlockingDeque<Consequence<T>> deque;

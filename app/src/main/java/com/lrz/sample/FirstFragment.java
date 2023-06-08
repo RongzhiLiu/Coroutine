@@ -194,7 +194,7 @@ public class FirstFragment extends Fragment {
 
     public void steam() {
         start()
-                .subscribe(new Observer<Integer>() {
+                .subscribe(Dispatcher.IO,new Observer<Integer>() {
                     @Override
                     public void onSubscribe(Integer integer) {
                         Log.i("---2subscribe", Thread.currentThread().getName() + "   " + integer);
@@ -210,14 +210,8 @@ public class FirstFragment extends Fragment {
             public void onSubscribe(Integer integer) {
                 Log.i("---subscribe", Thread.currentThread().getName() + "   1");
             }
-        });
-        CoroutineLRZContext.ExecuteDelay(Dispatcher.IO, new Runnable() {
-            @Override
-            public void run() {
-                emitter.next(2);
-            }
-        },1000);
-
+        }).thread(Dispatcher.BACKGROUND);
+        emitter.next(2);
         return observable;
     }
 }
