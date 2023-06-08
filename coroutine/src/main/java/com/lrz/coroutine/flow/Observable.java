@@ -97,8 +97,8 @@ public class Observable<T> implements Closeable {
                 if (!rs.isEmpty()) {
                     Dispatcher dis = getDispatcher();
                     if (dis == null) dis = getTaskDispatch();
+                    Observable finalPreObservable = preObservable;
                     if (dis != null) {
-                        Observable finalPreObservable = preObservable;
                         CoroutineLRZContext.INSTANCE.execute(dis, () -> {
                             for (Consequence<T> o : rs) {
                                 if (isCancel()) break;
@@ -113,6 +113,19 @@ public class Observable<T> implements Closeable {
                                 }
                             }
                         });
+                    } else {
+                        for (Consequence<T> o : rs) {
+                            if (isCancel()) break;
+                            try {
+                                if (finalPreObservable != this) {
+                                    finalPreObservable.dispatchNext(o.t);
+                                } else {
+                                    finalPreObservable.dispatchSubscribe((T) o.t);
+                                }
+                            } catch (Exception e) {
+                                dispatchError(e);
+                            }
+                        }
                     }
                 }
             }
@@ -185,6 +198,8 @@ public class Observable<T> implements Closeable {
                                 if (isCancel()) return;
                                 error.onError(throwable);
                             });
+                        } else {
+                            error.onError(throwable);
                         }
                     }
                 }

@@ -136,6 +136,10 @@ public class ObservableSet extends Observable<Integer> {
                     }
                 }
             }
+            //如果没有任何一个成功执行，则走error
+            if (observables != null && count.get() >= observables.length && successNum.get() == 0) {
+                onError(new CoroutineFlowException("all streams are error!"));
+            }
         }
     }
 
@@ -234,11 +238,8 @@ public class ObservableSet extends Observable<Integer> {
                 } else {
                     error.onError(throwable);
                 }
-            } else {
-                // 如果流没有处理error事件，则交给set处理
-                observableSet.onError(new CoroutineFlowException("stream has an error,and did not deal it self", throwable));
             }
-            //再把集的错误发送出去
+            //再通知事件集更新完成情况
             observableSet.onComplete(throwable, ob);
         }
     }
