@@ -15,35 +15,35 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * 重构 2023/5/21
  * 1.事件集的出现目的是什么
- * 	事件集是为了管理多个事件流的执行情况，观察多个事件流是否完成，和完成情况
+ * 事件集是为了管理多个事件流的执行情况，观察多个事件流是否完成，和完成情况
  * 2.为什么事件集在修改了多个版本后，仍然达不到预期
- * 	我只想到了多个事件流并发的情况，忽视了事件流之间的关系？无法兼容多种场景，而事件流之间的相互关系，影响到了事件集对什么时候是完成，什么时候是错误的定义出现了问题
+ * 我只想到了多个事件流并发的情况，忽视了事件流之间的关系？无法兼容多种场景，而事件流之间的相互关系，影响到了事件集对什么时候是完成，什么时候是错误的定义出现了问题
  * 3.事件集的已知使用场景，分析这个问题需要从事件流之间的关系入手，事件流之间的关系分以下两种
- *
- * 			-->  success（1）--> onSubscribe ->		    ｜
- * 	ob1----|				                    1 or 0	｜
- * 			--> execption（0--> onError    -->		    ｜
- *                                                      ｜
- * 									                    ｜	        ---> onSubscribe
- * 			-->  success（1）  --> onSubscribe ->		｜	        ｜
+ * <p>
+ * -->  success（1）--> onSubscribe ->		    ｜
+ * ob1----|				                    1 or 0	｜
+ * --> execption（0--> onError    -->		    ｜
+ * ｜
+ * ｜	        ---> onSubscribe
+ * -->  success（1）  --> onSubscribe ->		｜	        ｜
  * ob2----|				                         1 or 0	｜---set--->
- * 			--> execption（0） --> onError    -->		｜	        ｜
- * 									                    ｜	         ---> onError
- * 									                    ｜
- * 			-->  success（1）  --> onSubscribe ->		｜
+ * --> execption（0） --> onError    -->		｜	        ｜
+ * ｜	         ---> onError
+ * ｜
+ * -->  success（1）  --> onSubscribe ->		｜
  * ob3----|				                         1 or 0	｜
- * 			--> execption（0） --> onError    -->		｜
- *
- * 		1.and，多个事件流均完成且无错误，则事件集执行完毕，如果某一个事件流出现错误，则事件集执行失败，未完成的流需要关闭，事件集只执行error
- * 			每个流执行的结果都有成功和失败 也就是 1或0，当所有事件都是1，则set结果是1，即 1&1&1=1，有一个执行失败，则set是0即 0&1&1=0
- * 			公式 集的结果 y = x1&x2&x3
- *
- * 			举例：更新用户信息需要request两个接口，一个返回用户基本信息，一个返回用户vip信息，则两个流执行结果都是1.则集的结果是1，否则，是0
- *
- *
- * 		2.or，多个事件流的执行只要有一个成功，则集的执行就算成功，即 集的结果 y = x1|x2|x3,只有x都是0，y才是0
- * 			举例：在获取不同地址的相同资源，只要有一个商返回，则本次的请求就算成功
- * 		</p>
+ * --> execption（0） --> onError    -->		｜
+ * <p>
+ * 1.and，多个事件流均完成且无错误，则事件集执行完毕，如果某一个事件流出现错误，则事件集执行失败，未完成的流需要关闭，事件集只执行error
+ * 每个流执行的结果都有成功和失败 也就是 1或0，当所有事件都是1，则set结果是1，即 1&1&1=1，有一个执行失败，则set是0即 0&1&1=0
+ * 公式 集的结果 y = x1&x2&x3
+ * <p>
+ * 举例：更新用户信息需要request两个接口，一个返回用户基本信息，一个返回用户vip信息，则两个流执行结果都是1.则集的结果是1，否则，是0
+ * <p>
+ * <p>
+ * 2.or，多个事件流的执行只要有一个成功，则集的执行就算成功，即 集的结果 y = x1|x2|x3,只有x都是0，y才是0
+ * 举例：在获取不同地址的相同资源，只要有一个商返回，则本次的请求就算成功
+ * </p>
  */
 public class ObservableSet extends Observable<Integer> {
     Observable<?>[] observables;
@@ -51,7 +51,7 @@ public class ObservableSet extends Observable<Integer> {
     AtomicInteger count = new AtomicInteger();
     //成功多少个
     AtomicInteger successNum = new AtomicInteger();
-    //执行模式，1 and，2 or
+    //执行模式，1 and，2 or 3 竞争关系
     private int setMode = 1;
     private volatile boolean closeOnComplete = true;
 
@@ -82,6 +82,14 @@ public class ObservableSet extends Observable<Integer> {
     ObservableSet CreateOr(boolean closeOnComplete, Observable<?>... observable) {
         ObservableSet set = create(observable);
         set.setMode = 2;
+        set.closeOnComplete = closeOnComplete;
+        return set;
+    }
+
+    public static @NotNull
+    ObservableSet CreateSuc(boolean closeOnComplete, Observable<?>... observable) {
+        ObservableSet set = create(observable);
+        set.setMode = 3;
         set.closeOnComplete = closeOnComplete;
         return set;
     }
@@ -117,12 +125,22 @@ public class ObservableSet extends Observable<Integer> {
                     }
                 }
             }
+        } else if (setMode == 3) {
+            //竞争模式下，有且仅有一个成功，才会回调
+            if (observables != null && successNum.get() == 1) {
+                onSubscribe(1);
+                //完成后，是否需要关闭其他流
+                if (closeOnComplete) {
+                    for (Observable<?> ob : observables) {
+                        if (ob != observable) ob.cancel();
+                    }
+                }
+            }
         }
     }
 
     /**
      * 复写父类，不处理线程回调，只接收多任务结束事件
-     *
      */
     @Override
     protected void onSubscribe(Integer num) {
@@ -173,7 +191,6 @@ public class ObservableSet extends Observable<Integer> {
 
     /**
      * 当前线程，立即执行所有任务
-     *
      */
     @Override
     public synchronized Observable<Integer> execute() {
